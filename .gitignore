@@ -21,4 +21,8 @@ Vocabulary/ORBvoc.txt
 build/
 *~
 lib/
-
+.*
+*build*
+*.txt
+*.jpg
+*.png

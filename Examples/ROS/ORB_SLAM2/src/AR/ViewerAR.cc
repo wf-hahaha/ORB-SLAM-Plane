@@ -25,7 +25,7 @@
 #include <mutex>
 #include <thread>
 #include <cstdlib>
-
+#include <unistd.h>
 using namespace std;
 
 namespace ORB_SLAM2

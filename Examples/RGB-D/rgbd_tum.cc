@@ -27,7 +27,7 @@
 #include<opencv2/core/core.hpp>
 
 #include<System.h>
-
+#include <unistd.h>
 using namespace std;
 
 void LoadImages(const string &strAssociationFilename, vector<string> &vstrImageFilenamesRGB,
