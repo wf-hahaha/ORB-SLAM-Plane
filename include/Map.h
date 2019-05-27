@@ -23,6 +23,7 @@
 
 #include "MapPoint.h"
 #include "KeyFrame.h"
+#include "MapPlane.h"
 #include <set>
 
 #include <mutex>
@@ -34,6 +35,8 @@ namespace ORB_SLAM2
 
 class MapPoint;
 class KeyFrame;
+class MapPlane;
+class Frame;
 
 class Map
 {
@@ -42,17 +45,23 @@ public:
 
     void AddKeyFrame(KeyFrame* pKF);
     void AddMapPoint(MapPoint* pMP);
+    void AddMapPlane(MapPlane* pMP);
+
     void EraseMapPoint(MapPoint* pMP);
     void EraseKeyFrame(KeyFrame* pKF);
     void SetReferenceMapPoints(const std::vector<MapPoint*> &vpMPs);
     void InformNewBigChange();
     int GetLastBigChangeIdx();
 
+    void AssociatePlanes(KeyFrame* pF);
+    void AssociatePlanes(Frame& pF);
+
     std::vector<KeyFrame*> GetAllKeyFrames();
     std::vector<MapPoint*> GetAllMapPoints();
     std::vector<MapPoint*> GetReferenceMapPoints();
 
     long unsigned int MapPointsInMap();
+    long unsigned int MapPlanesInMap();
     long unsigned  KeyFramesInMap();
 
     long unsigned int GetMaxKFid();
@@ -69,6 +78,8 @@ public:
 protected:
     std::set<MapPoint*> mspMapPoints;
     std::set<KeyFrame*> mspKeyFrames;
+
+    std::vector<MapPlane*> mvpMapPlanes;
 
     std::vector<MapPoint*> mvpReferenceMapPoints;
 

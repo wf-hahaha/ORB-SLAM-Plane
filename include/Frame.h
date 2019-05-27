@@ -29,8 +29,19 @@
 #include "ORBVocabulary.h"
 #include "KeyFrame.h"
 #include "ORBextractor.h"
+#include "Config.h"
+#include "MapPlane.h"
 
 #include <opencv2/opencv.hpp>
+
+#include <pcl/common/transforms.h>
+#include <pcl/point_types.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/visualization/cloud_viewer.h>
 
 namespace ORB_SLAM2
 {
@@ -39,12 +50,15 @@ namespace ORB_SLAM2
 
 class MapPoint;
 class KeyFrame;
+class MapPlane;
 
 class Frame
 {
-public:
-    Frame();
 
+public:
+    typedef pcl::PointXYZRGB PointT;
+    typedef pcl::PointCloud <PointT> PointCloud;
+    Frame();
     // Copy constructor.
     Frame(const Frame &frame);
 
@@ -97,6 +111,10 @@ public:
 
     // Backprojects a keypoint (if stereo/depth info available) into 3D world coordinates.
     cv::Mat UnprojectStereo(const int &i);
+
+    //Plane functions
+    void ComputePlanesFromPointCloud(const cv::Mat &imDepth);
+    cv::Mat ComputePlaneWorldCoeff(const int &idx);
 
 public:
     // Vocabulary used for relocalization.
@@ -187,7 +205,12 @@ public:
 
     static bool mbInitialComputations;
 
+    //For PointCloud
+    std::vector<PointCloud> mvPlanePoints;
+    std::vector<cv::Mat> mvPlaneCoefficients;
+    std::vector<MapPlane*> mvpMapPlanes;
 
+    int mnPlaneNum;
 private:
 
     // Undistort keypoints given OpenCV distortion parameters.

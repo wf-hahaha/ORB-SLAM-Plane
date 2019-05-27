@@ -26,7 +26,8 @@
 
 #include<opencv2/core/core.hpp>
 
-#include<System.h>
+#include <System.h>
+#include <Config.h>
 #include <unistd.h>
 using namespace std;
 
@@ -63,6 +64,7 @@ int main(int argc, char **argv)
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::RGBD,true);
+    ORB_SLAM2::Config::SetParameterFile(argv[2]);
 
     // Vector for tracking time statistics
     vector<float> vTimesTrack;

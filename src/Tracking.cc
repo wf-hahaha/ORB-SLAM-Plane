@@ -146,6 +146,8 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
             mDepthMapFactor = 1.0f/mDepthMapFactor;
     }
 
+    mpPointCloudMapping = make_shared<PointCloudMapping>();
+
 }
 
 void Tracking::SetLocalMapper(LocalMapping *pLocalMapper)
@@ -207,7 +209,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
 {
     mImGray = imRGB;
-    cv::Mat imDepth = imD;
+    mImDepth = imD;
 
     if(mImGray.channels()==3)
     {
@@ -224,10 +226,10 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
             cvtColor(mImGray,mImGray,CV_BGRA2GRAY);
     }
 
-    if((fabs(mDepthMapFactor-1.0f)>1e-5) || imDepth.type()!=CV_32F)
-        imDepth.convertTo(imDepth,CV_32F,mDepthMapFactor);
+    if((fabs(mDepthMapFactor-1.0f)>1e-5) || mImDepth.type()!=CV_32F)
+        mImDepth.convertTo(mImDepth,CV_32F,mDepthMapFactor);
 
-    mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
+    mCurrentFrame = Frame(mImGray,mImDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
     Track();
 
@@ -539,6 +541,15 @@ void Tracking::StereoInitialization()
 
         cout << "New map created with " << mpMap->MapPointsInMap() << " points" << endl;
 
+        for (int i = 0; i < mCurrentFrame.mnPlaneNum; ++i) {
+            cv::Mat p3D = mCurrentFrame.ComputePlaneWorldCoeff(i);
+            MapPlane* pNewMP = new MapPlane(p3D, pKFini, i);
+            mpMap->AddMapPlane(pNewMP);
+            pKFini->AddMapPlane(pNewMP, i);
+        }
+
+        cout << "New map created with " << mpMap->MapPlanesInMap() << " planes" << endl;
+
         mpLocalMapper->InsertKeyFrame(pKFini);
 
         mLastFrame = Frame(mCurrentFrame);
@@ -771,6 +782,8 @@ bool Tracking::TrackReferenceKeyFrame()
 
     mCurrentFrame.mvpMapPoints = vpMapPointMatches;
     mCurrentFrame.SetPose(mLastFrame.mTcw);
+
+    mpMap->AssociatePlanes(mCurrentFrame);
 
     Optimizer::PoseOptimization(&mCurrentFrame);
 
@@ -1074,6 +1087,18 @@ void Tracking::CreateNewKeyFrame()
     {
         mCurrentFrame.UpdatePoseMatrices();
 
+        mpMap->AssociatePlanes(pKF);
+
+        for (int i = 0; i < pKF->mnPlaneNum; ++i) {
+            if(pKF->mvpMapPlanes[i])
+                continue;
+            cv::Mat p3D = pKF->ComputePlaneWorldCoeff(i);
+            MapPlane* pNewMP = new MapPlane(p3D, pKF, i);
+            mpMap->AddMapPlane(pNewMP);
+            pKF->AddMapPlane(pNewMP, i);
+        }
+
+        cout << "New map created with " << mpMap->MapPlanesInMap() << " planes" << endl;
         // We sort points by the measured depth by the stereo/RGBD sensor.
         // We create all those MapPoints whose depth < mThDepth.
         // If there are less than 100 close points we create the 100 closest.
@@ -1135,6 +1160,8 @@ void Tracking::CreateNewKeyFrame()
     mpLocalMapper->InsertKeyFrame(pKF);
 
     mpLocalMapper->SetNotStop(false);
+
+    mpPointCloudMapping->insertKeyFrame( pKF, mImGray, mImDepth );
 
     mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKF;

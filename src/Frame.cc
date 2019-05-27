@@ -47,7 +47,9 @@ Frame::Frame(const Frame &frame)
      mpReferenceKF(frame.mpReferenceKF), mnScaleLevels(frame.mnScaleLevels),
      mfScaleFactor(frame.mfScaleFactor), mfLogScaleFactor(frame.mfLogScaleFactor),
      mvScaleFactors(frame.mvScaleFactors), mvInvScaleFactors(frame.mvInvScaleFactors),
-     mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2)
+     mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2),
+     mvPlanePoints(frame.mvPlanePoints), mvPlaneCoefficients(frame.mvPlaneCoefficients),
+     mvpMapPlanes(frame.mvpMapPlanes), mnPlaneNum(frame.mnPlaneNum)
 {
     for(int i=0;i<FRAME_GRID_COLS;i++)
         for(int j=0; j<FRAME_GRID_ROWS; j++)
@@ -57,7 +59,7 @@ Frame::Frame(const Frame &frame)
         SetPose(frame.mTcw);
 }
 
-
+//stereo
 Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
      mpReferenceKF(static_cast<KeyFrame*>(NULL))
@@ -116,6 +118,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     AssignFeaturesToGrid();
 }
 
+//RGB-D
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
@@ -144,6 +147,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 
     ComputeStereoFromRGBD(imDepth);
 
+
     mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
     mvbOutlier = vector<bool>(N,false);
 
@@ -168,9 +172,31 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mb = mbf/fx;
 
     AssignFeaturesToGrid();
+
+    ComputePlanesFromPointCloud(imDepth);
+    mnPlaneNum = mvPlanePoints.size();
+    mvpMapPlanes = vector<MapPlane*>(mnPlaneNum,static_cast<MapPlane*>(nullptr));
+
+//    pcl::visualization::CloudViewer viewer("viewer");
+//
+//    for(int x = 0; x < mvPlanePoints.size(); ++x) {
+//        viewer.showCloud(mvPlanePoints[x].makeShared());
+//        getchar();
+//    }
+
+//    cout << "plane " << mnId << " : " << endl;
+//    cout << "  find plane: " << mvPlanePoints.size() << endl;
+//    for(int x = 0; x < mvPlanePoints.size(); ++x){
+//        cout << "    " << x << " : " << mvPlanePoints[x].points.size()
+//        << " coe: " << mvPlaneCoefficients[x].values[0]  << "  "
+//                << mvPlaneCoefficients[x].values[1]  << "  "
+//                << mvPlaneCoefficients[x].values[2]  << "  "
+//                << mvPlaneCoefficients[x].values[3]  << "  " << endl;
+//    }
+
 }
 
-
+// monocular
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
@@ -679,4 +705,67 @@ cv::Mat Frame::UnprojectStereo(const int &i)
         return cv::Mat();
 }
 
+void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
+    PointCloud::Ptr inputCloud( new PointCloud() );
+    for ( int m=0; m<imDepth.rows; m+=3 )
+    {
+        for ( int n=0; n<imDepth.cols; n+=3 )
+        {
+            float d = imDepth.ptr<float>(m)[n];
+            if (d < 0.01 || d>10)
+                continue;
+            PointT p;
+            p.z = d;
+            p.x = ( n - cx) * p.z / fx;
+            p.y = ( m - cy) * p.z / fy;
+
+            inputCloud->points.push_back(p);
+        }
+    }
+//    cout << "point cloud size: " << inputCloud->points.size() << endl;
+    if(inputCloud->points.size() < 1000)
+        return;
+
+    pcl::SACSegmentation<PointT> seg;
+    seg.setOptimizeCoefficients(true);
+    seg.setModelType(pcl::SACMODEL_PLANE);
+    seg.setMaxIterations(1000);
+    seg.setDistanceThreshold(0.01);
+
+    pcl::ExtractIndices<PointT> extract;
+    int nr_points = (int) inputCloud->points.size();
+    pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients ());
+
+    PointCloud::Ptr planeCloud(new PointCloud());
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
+
+    int min_plane = Config::Get<int>("Plane.MinSize");
+
+    while(inputCloud->points.size() > 0.3*nr_points){
+        seg.setInputCloud(inputCloud);
+        seg.segment(*inliers,*coefficients);
+        if(inliers->indices.size() < min_plane)
+            break;
+        extract.setInputCloud(inputCloud);
+        extract.setIndices(inliers);
+        extract.setNegative(false);
+        extract.filter(*planeCloud);
+
+        mvPlanePoints.push_back(*planeCloud);
+
+        cv::Mat coef = (cv::Mat_<float>(4,1) << coefficients->values[0],
+                                                coefficients->values[1],
+                                                coefficients->values[2],
+                                                coefficients->values[3]);
+        mvPlaneCoefficients.push_back(coef);
+
+        extract.setNegative(true);
+        extract.filter(*planeCloud);
+        inputCloud.swap(planeCloud);
+    }
+
+}
+    cv::Mat Frame::ComputePlaneWorldCoeff(const int &idx) {
+        return mTcw*mvPlaneCoefficients[idx];
+    }
 } //namespace ORB_SLAM

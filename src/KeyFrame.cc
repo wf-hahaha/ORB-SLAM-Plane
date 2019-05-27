@@ -41,7 +41,9 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mvInvLevelSigma2(F.mvInvLevelSigma2), mnMinX(F.mnMinX), mnMinY(F.mnMinY), mnMaxX(F.mnMaxX),
     mnMaxY(F.mnMaxY), mK(F.mK), mvpMapPoints(F.mvpMapPoints), mpKeyFrameDB(pKFDB),
     mpORBvocabulary(F.mpORBvocabulary), mbFirstConnection(true), mpParent(NULL), mbNotErase(false),
-    mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap)
+    mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap),
+    mvPlanePoints(F.mvPlanePoints), mvPlaneCoefficients(F.mvPlaneCoefficients), mnPlaneNum(F.mnPlaneNum),
+    mvpMapPlanes(F.mvpMapPlanes)
 {
     mnId=nNextId++;
 
@@ -660,6 +662,22 @@ float KeyFrame::ComputeSceneMedianDepth(const int q)
     sort(vDepths.begin(),vDepths.end());
 
     return vDepths[(vDepths.size()-1)/q];
+}
+
+cv::Mat KeyFrame::ComputePlaneWorldCoeff(const int &idx) {
+    cv::Mat temp;
+    cv::transpose(Tcw, temp);
+    return temp*mvPlaneCoefficients[idx];
+}
+
+void KeyFrame::AddMapPlane(ORB_SLAM2::MapPlane *pMP, const int &idx) {
+    unique_lock<mutex> lock(mMutexFeatures);
+    mvpMapPlanes[idx] = pMP;
+}
+
+void KeyFrame::EraseMapPlaneMatch(const int &idx) {
+    unique_lock<mutex> lock(mMutexFeatures);
+    mvpMapPlanes[idx]=static_cast<MapPlane*>(NULL);
 }
 
 } //namespace ORB_SLAM

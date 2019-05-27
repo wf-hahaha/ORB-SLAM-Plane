@@ -43,6 +43,11 @@ void Map::AddMapPoint(MapPoint *pMP)
     mspMapPoints.insert(pMP);
 }
 
+void Map::AddMapPlane(MapPlane *pMP) {
+    unique_lock<mutex> lock(mMutexMap);
+    mvpMapPlanes.push_back(pMP);
+}
+
 void Map::EraseMapPoint(MapPoint *pMP)
 {
     unique_lock<mutex> lock(mMutexMap);
@@ -97,6 +102,11 @@ long unsigned int Map::MapPointsInMap()
     return mspMapPoints.size();
 }
 
+long unsigned int Map::MapPlanesInMap() {
+    unique_lock<mutex> lock(mMutexMap);
+    return mvpMapPlanes.size();
+}
+
 long unsigned int Map::KeyFramesInMap()
 {
     unique_lock<mutex> lock(mMutexMap);
@@ -123,11 +133,74 @@ void Map::clear()
     for(set<KeyFrame*>::iterator sit=mspKeyFrames.begin(), send=mspKeyFrames.end(); sit!=send; sit++)
         delete *sit;
 
+    for(vector<MapPlane*>::iterator sit=mvpMapPlanes.begin(), send=mvpMapPlanes.end(); sit!=send; sit++)
+        delete *sit;
+
     mspMapPoints.clear();
     mspKeyFrames.clear();
+    mvpMapPlanes.clear();
     mnMaxKFid = 0;
     mvpReferenceMapPoints.clear();
     mvpKeyFrameOrigins.clear();
 }
 
+void Map::AssociatePlanes(ORB_SLAM2::KeyFrame *pF) {
+    bool find;
+    float dTh = Config::Get<float>("Plane.AssociationDis");
+    float aTh = Config::Get<float>("Plane.AssociationAng");
+    for (int i = 0; i < pF->mnPlaneNum; ++i) {
+        find = true;
+        for (int j = 0; find && j < mvpMapPlanes.size(); ++j) {
+            cv::Mat pM = pF->ComputePlaneWorldCoeff(i);
+            cv::Mat pW = mvpMapPlanes[j]->GetWorldPos();
+            float d = pM.at<float>(3,0) - pW.at<float>(3,0);
+            if(d > dTh || d < -dTh)
+                continue;
+            float angle = pM.at<float>(0,0) * pW.at<float>(0,0) +
+                          pM.at<float>(1,0) * pW.at<float>(1,0) +
+                          pM.at<float>(2,0) * pW.at<float>(2,0);
+            if(angle < aTh)
+                continue;
+
+            find = false;
+            pF->mvpMapPlanes[i] = mvpMapPlanes[j];
+
+        }
+    }
+}
+
+void Map::AssociatePlanes(ORB_SLAM2::Frame &pF) {
+        bool find = true;
+        float dTh = Config::Get<float>("Plane.AssociationDis");
+        float aTh = Config::Get<float>("Plane.AssociationAng");
+        for (int i = 0; i < pF.mnPlaneNum; ++i) {
+            find = true;
+            for (int j = 0; find && j < mvpMapPlanes.size(); ++j) {
+                cv::Mat pM = pF.ComputePlaneWorldCoeff(i);
+                cv::Mat pW = mvpMapPlanes[j]->GetWorldPos();
+                float d = pM.at<float>(3,0) - pW.at<float>(3,0);
+                if(d > dTh || d < -dTh)
+                    continue;
+                float angle = pM.at<float>(0,0) * pW.at<float>(0,0) +
+                              pM.at<float>(1,0) * pW.at<float>(1,0) +
+                              pM.at<float>(2,0) * pW.at<float>(2,0);
+                if(angle < aTh)
+                    continue;
+
+                find = false;
+                pF.mvpMapPlanes[i] = mvpMapPlanes[j];
+
+            }
+        }
+    }
 } //namespace ORB_SLAM
+
+
+
+
+
+
+
+
+
+
