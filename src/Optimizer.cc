@@ -35,6 +35,9 @@
 #include<Eigen/StdVector>
 
 #include "Converter.h"
+#include "g2oAddition/Plane3D.h"
+#include "g2oAddition/EdgePlane.h"
+#include "g2oAddition/VertexPlane.h"
 
 #include<mutex>
 
@@ -367,6 +370,11 @@ int Optimizer::PoseOptimization(Frame *pFrame)
 
     if(nInitialCorrespondences<3)
         return 0;
+
+
+    //Set Plane vertices
+
+
 
     // We perform 4 optimizations, after each optimization we classify observation as inlier/outlier
     // At the next optimization, outliers are not included, but at the end they can be classified as inliers again.

@@ -221,7 +221,10 @@ protected:
 
     list<MapPoint*> mlpTemporalPoints;
 
-
+    float mfDThRef;
+    float mfDThMon;
+    float mfAThRef;
+    float mfAThMon;
 };
 
 } //namespace ORB_SLAM

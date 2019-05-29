@@ -9,7 +9,7 @@
 #include"Frame.h"
 #include"Map.h"
 
-#include<opencv2/core/core.hpp>
+#include <opencv2/core/core.hpp>
 #include <mutex>
 #include <pcl/common/transforms.h>
 #include <pcl/point_types.h>
@@ -34,6 +34,7 @@ namespace ORB_SLAM2 {
     public:
         long unsigned int mnId; ///< Global ID for MapPlane;
         static long unsigned int nLastId;
+        static std::mutex mGlobalMutex;
 //        PointCloud mPlanePoints;
         int mRed;
         int mGreen;

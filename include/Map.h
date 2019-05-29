@@ -53,8 +53,8 @@ public:
     void InformNewBigChange();
     int GetLastBigChangeIdx();
 
-    void AssociatePlanes(KeyFrame* pF);
-    void AssociatePlanes(Frame& pF);
+    void AssociatePlanes(KeyFrame* pF, const float &dTh, const float &aTh);
+    void AssociatePlanes(Frame& pF, const float &dTh, const float &aTh);
 
     std::vector<KeyFrame*> GetAllKeyFrames();
     std::vector<MapPoint*> GetAllMapPoints();

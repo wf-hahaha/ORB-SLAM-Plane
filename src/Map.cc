@@ -144,10 +144,8 @@ void Map::clear()
     mvpKeyFrameOrigins.clear();
 }
 
-void Map::AssociatePlanes(ORB_SLAM2::KeyFrame *pF) {
+void Map::AssociatePlanes(ORB_SLAM2::KeyFrame *pF, const float &dTh, const float &aTh) {
     bool find;
-    float dTh = Config::Get<float>("Plane.AssociationDis");
-    float aTh = Config::Get<float>("Plane.AssociationAng");
     for (int i = 0; i < pF->mnPlaneNum; ++i) {
         find = true;
         for (int j = 0; find && j < mvpMapPlanes.size(); ++j) {
@@ -168,11 +166,8 @@ void Map::AssociatePlanes(ORB_SLAM2::KeyFrame *pF) {
         }
     }
 }
-
-void Map::AssociatePlanes(ORB_SLAM2::Frame &pF) {
+void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &aTh) {
         bool find = true;
-        float dTh = Config::Get<float>("Plane.AssociationDis");
-        float aTh = Config::Get<float>("Plane.AssociationAng");
         for (int i = 0; i < pF.mnPlaneNum; ++i) {
             find = true;
             for (int j = 0; find && j < mvpMapPlanes.size(); ++j) {

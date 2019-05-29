@@ -69,5 +69,7 @@ Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
 Plane.MinSize: 300
-Plane.AssociationDis: 0.1
-Plane.AssociationAng: 0.985 # 10 degree
+Plane.AssociationDisRef: 0.1
+Plane.AssociationDisMon: 0.1
+Plane.AssociationAngRef: 0.985 # 10 degree
+Plane.AssociationAngMon: 0.985 # 10 degree

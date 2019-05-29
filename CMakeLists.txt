@@ -43,6 +43,7 @@ find_package( PCL 1.7 REQUIRED)
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
+        ${PROJECT_SOURCE_DIR}/g2oAddition
 ${PROJECT_SOURCE_DIR}/include
 ${EIGEN3_INCLUDE_DIR}
 ${Pangolin_INCLUDE_DIRS}
@@ -77,6 +78,8 @@ src/Viewer.cc
         src/PointCloudMapping.cc
         src/Config.cc
         src/MapPlane.cc
+        g2oAddition/VertexPlane.cc
+        g2oAddition/EdgePlane.cc
 )
 
 target_link_libraries(${PROJECT_NAME}

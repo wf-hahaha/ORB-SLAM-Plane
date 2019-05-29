@@ -56,6 +56,11 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     float cx = fSettings["Camera.cx"];
     float cy = fSettings["Camera.cy"];
 
+    mfDThRef = fSettings["Plane.AssociationDisRef"];
+    mfDThMon = fSettings["Plane.AssociationDisMon"];
+    mfAThRef = fSettings["Plane.AssociationAngRef"];
+    mfAThMon = fSettings["Plane.AssociationAngMon"];
+
     cv::Mat K = cv::Mat::eye(3,3,CV_32F);
     K.at<float>(0,0) = fx;
     K.at<float>(1,1) = fy;
@@ -783,7 +788,7 @@ bool Tracking::TrackReferenceKeyFrame()
     mCurrentFrame.mvpMapPoints = vpMapPointMatches;
     mCurrentFrame.SetPose(mLastFrame.mTcw);
 
-    mpMap->AssociatePlanes(mCurrentFrame);
+    mpMap->AssociatePlanes(mCurrentFrame, mfDThRef, mfAThRef);
 
     Optimizer::PoseOptimization(&mCurrentFrame);
 
@@ -906,6 +911,8 @@ bool Tracking::TrackWithMotionModel()
 
     if(nmatches<20)
         return false;
+
+    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon);
 
     // Optimize frame pose with all matches
     Optimizer::PoseOptimization(&mCurrentFrame);
@@ -1087,7 +1094,7 @@ void Tracking::CreateNewKeyFrame()
     {
         mCurrentFrame.UpdatePoseMatrices();
 
-        mpMap->AssociatePlanes(pKF);
+        mpMap->AssociatePlanes(pKF, mfDThMon, mfAThMon);
 
         for (int i = 0; i < pKF->mnPlaneNum; ++i) {
             if(pKF->mvpMapPlanes[i])

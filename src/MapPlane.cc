@@ -9,6 +9,7 @@
 
 namespace ORB_SLAM2{
     long unsigned int MapPlane::nLastId = 0;
+    mutex MapPlane::mGlobalMutex;
 
     MapPlane::MapPlane(const cv::Mat &Pos, ORB_SLAM2::KeyFrame *pRefKF, int idx)
 
@@ -46,6 +47,7 @@ namespace ORB_SLAM2{
     }
     void MapPlane::SetWorldPos(const cv::Mat &Pos)
     {
+        unique_lock<mutex> lock2(mGlobalMutex);
         unique_lock<mutex> lock(mMutexPos);
         Pos.copyTo(mWorldPos);
     }
