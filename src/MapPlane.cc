@@ -11,40 +11,48 @@ namespace ORB_SLAM2{
     long unsigned int MapPlane::nLastId = 0;
     mutex MapPlane::mGlobalMutex;
 
-    MapPlane::MapPlane(const cv::Mat &Pos, ORB_SLAM2::KeyFrame *pRefKF, int idx)
-
+    MapPlane::MapPlane(const cv::Mat &Pos, ORB_SLAM2::KeyFrame *pRefKF, int idx):
+    mnBALocalForKF(0)
     {
         Pos.copyTo(mWorldPos);
         mnId = nLastId++;
         AddObservation(pRefKF, idx);
-//        mPlanePoints = pRefKF->mvPlanePoints[idx];
 
-        srand((int)time(nullptr));
+//        srand((int)time(nullptr));
         mRed = rand() % 256;
         mBlue = rand() % 256;
         mGreen = rand() % 256;
-//        SetColor();
+
     }
 
-//    void MapPlane::SetColor() {
-//        for(auto& p : mPlanePoints){
-//            p.r = mRed;
-//            p.g = mGreen;
-//            p.b = mBlue;
-//        }
-//    }
-
     void MapPlane::AddObservation(ORB_SLAM2::KeyFrame *pKF, int idx) {
+        unique_lock<mutex> lock(mMutexFeatures);
         if(mObservations.count(pKF))
             return;
         mObservations[pKF] = idx;
     }
 
     void MapPlane::EraseObservation(ORB_SLAM2::KeyFrame *pKF) {
+        unique_lock<mutex> lock(mMutexFeatures);
         if(mObservations.count(pKF)){
             mObservations.erase(pKF);
         }
     }
+
+    map<ORB_SLAM2::KeyFrame*, int> MapPlane::GetObservations()
+    {
+        unique_lock<mutex> lock(mMutexFeatures);
+        return mObservations;
+    }
+
+    int MapPlane::GetIndexInKeyFrame(ORB_SLAM2::KeyFrame *pKF) {
+        unique_lock<mutex> lock(mMutexFeatures);
+        if(mObservations.count(pKF))
+            return mObservations[pKF];
+        else
+            return -1;
+    }
+
     void MapPlane::SetWorldPos(const cv::Mat &Pos)
     {
         unique_lock<mutex> lock2(mGlobalMutex);

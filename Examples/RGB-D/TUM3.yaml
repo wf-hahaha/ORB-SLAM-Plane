@@ -67,3 +67,13 @@ Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
+Plane.MinSize: 1000
+Plane.AssociationDisRef: 0.15
+Plane.AssociationDisMon: 0.15
+Plane.AssociationAngRef: 0.965 # 15 degree
+Plane.AssociationAngMon: 0.965 # 15 degree
+#Plane.AssociationAngRef: 0.985 # 10 degree
+#Plane.AssociationAngMon: 0.985 # 10 degree
+
+SavePath.Frame: "CameraTrajectory_2.txt"
+SavePath.Keyframe: "KeyFrameTrajectory_2.txt"

@@ -680,4 +680,11 @@ void KeyFrame::EraseMapPlaneMatch(const int &idx) {
     mvpMapPlanes[idx]=static_cast<MapPlane*>(NULL);
 }
 
+void KeyFrame::EraseMapPlaneMatch(ORB_SLAM2::MapPlane *pMP) {
+    int idx = pMP->GetIndexInKeyFrame(this);
+    unique_lock<mutex> lock(mMutexFeatures);
+    if(idx>=0)
+        mvpMapPlanes[idx]=static_cast<MapPlane*>(NULL);
+}
+
 } //namespace ORB_SLAM

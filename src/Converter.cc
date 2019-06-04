@@ -148,4 +148,25 @@ std::vector<float> Converter::toQuaternion(const cv::Mat &M)
     return v;
 }
 
+g2o::Plane3D Converter::toPlane3D(const cv::Mat &coe) {
+    Eigen::Matrix<double,4,1,Eigen::ColMajor> V;
+    V << coe.at<float>(0,0),
+         coe.at<float>(1,0),
+         coe.at<float>(2,0),
+         coe.at<float>(3,0);
+    return g2o::Plane3D(V);
+}
+
+cv::Mat Converter::toCvMat(const g2o::Plane3D &plane) {
+    Eigen::Matrix<double,4,1,Eigen::ColMajor> V;
+    V = plane.toVector();
+    cv::Mat cvMat(4,1,CV_32F);
+    for(int i=0;i<4;i++)
+        cvMat.at<float>(i,0) = V(i,0);
+
+    return cvMat.clone();
+}
+
+
+
 } //namespace ORB_SLAM

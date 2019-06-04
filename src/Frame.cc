@@ -49,7 +49,7 @@ Frame::Frame(const Frame &frame)
      mvScaleFactors(frame.mvScaleFactors), mvInvScaleFactors(frame.mvInvScaleFactors),
      mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2),
      mvPlanePoints(frame.mvPlanePoints), mvPlaneCoefficients(frame.mvPlaneCoefficients),
-     mvpMapPlanes(frame.mvpMapPlanes), mnPlaneNum(frame.mnPlaneNum)
+     mvpMapPlanes(frame.mvpMapPlanes), mnPlaneNum(frame.mnPlaneNum), mvbPlaneOutlier(frame.mvbPlaneOutlier)
 {
     for(int i=0;i<FRAME_GRID_COLS;i++)
         for(int j=0; j<FRAME_GRID_ROWS; j++)
@@ -176,7 +176,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     ComputePlanesFromPointCloud(imDepth);
     mnPlaneNum = mvPlanePoints.size();
     mvpMapPlanes = vector<MapPlane*>(mnPlaneNum,static_cast<MapPlane*>(nullptr));
-
+    mvbPlaneOutlier = vector<bool>(mnPlaneNum,false);
 //    pcl::visualization::CloudViewer viewer("viewer");
 //
 //    for(int x = 0; x < mvPlanePoints.size(); ++x) {
@@ -766,6 +766,8 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
 
 }
     cv::Mat Frame::ComputePlaneWorldCoeff(const int &idx) {
-        return mTcw*mvPlaneCoefficients[idx];
+        cv::Mat temp;
+        cv::transpose(mTcw, temp);
+        return temp*mvPlaneCoefficients[idx];
     }
 } //namespace ORB_SLAM

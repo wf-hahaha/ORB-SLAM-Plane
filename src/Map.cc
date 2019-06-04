@@ -96,6 +96,11 @@ vector<MapPoint*> Map::GetAllMapPoints()
     return vector<MapPoint*>(mspMapPoints.begin(),mspMapPoints.end());
 }
 
+vector<MapPlane*> Map::GetAllMapPlanes() {
+    unique_lock<mutex> lock(mMutexMap);
+    return mvpMapPlanes;
+}
+
 long unsigned int Map::MapPointsInMap()
 {
     unique_lock<mutex> lock(mMutexMap);
@@ -146,6 +151,7 @@ void Map::clear()
 
 void Map::AssociatePlanes(ORB_SLAM2::KeyFrame *pF, const float &dTh, const float &aTh) {
     bool find;
+    unique_lock<mutex> lock(mMutexMap);
     for (int i = 0; i < pF->mnPlaneNum; ++i) {
         find = true;
         for (int j = 0; find && j < mvpMapPlanes.size(); ++j) {
@@ -168,8 +174,11 @@ void Map::AssociatePlanes(ORB_SLAM2::KeyFrame *pF, const float &dTh, const float
 }
 void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &aTh) {
         bool find = true;
+        clock_t time1 = clock();
+        unique_lock<mutex> lock(mMutexMap);
         for (int i = 0; i < pF.mnPlaneNum; ++i) {
             find = true;
+//            pF.mvpMapPlanes[i] = nullptr;
             for (int j = 0; find && j < mvpMapPlanes.size(); ++j) {
                 cv::Mat pM = pF.ComputePlaneWorldCoeff(i);
                 cv::Mat pW = mvpMapPlanes[j]->GetWorldPos();
@@ -184,9 +193,9 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
 
                 find = false;
                 pF.mvpMapPlanes[i] = mvpMapPlanes[j];
-
             }
         }
+//        cout<< "Time of  association : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     }
 } //namespace ORB_SLAM
 

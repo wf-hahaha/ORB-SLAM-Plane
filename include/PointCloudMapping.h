@@ -22,6 +22,7 @@
 
 #include "System.h"
 #include "KeyFrame.h"
+#include "Map.h"
 #include <pcl/common/transforms.h>
 #include <pcl/point_types.h>
 #include <pcl/sample_consensus/method_types.h>
@@ -37,12 +38,13 @@
 
 namespace ORB_SLAM2 {
 class KeyFrame;
+class Map;
     class PointCloudMapping {
     public:
         typedef pcl::PointXYZRGB PointT;
         typedef pcl::PointCloud<PointT> PointCloud;
 
-        PointCloudMapping();
+        PointCloudMapping(Map* map);
 
         // 插入一个keyframe，会更新一次地图
         void insertKeyFrame(KeyFrame *kf, cv::Mat &color, cv::Mat &depth);
@@ -52,6 +54,8 @@ class KeyFrame;
         void viewer();
 
     protected:
+        Map* mMap;
+
         void AddKFPointCloud(KeyFrame *pKF);
 
         PointCloud::Ptr mAllCloudPoints;

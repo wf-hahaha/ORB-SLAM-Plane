@@ -17,8 +17,9 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/ModelCoefficients.h>
 
-class KeyFrame;
+
 namespace ORB_SLAM2 {
+    class KeyFrame;
     class MapPlane {
         typedef pcl::PointXYZRGB PointT;
         typedef pcl::PointCloud <PointT> PointCloud;
@@ -30,12 +31,15 @@ namespace ORB_SLAM2 {
 
         void AddObservation(KeyFrame* pKF, int idx);
         void EraseObservation(KeyFrame* pKF);
-
+        map<KeyFrame*, int> GetObservations();
+        int GetIndexInKeyFrame(KeyFrame *pKF);
     public:
         long unsigned int mnId; ///< Global ID for MapPlane;
         static long unsigned int nLastId;
         static std::mutex mGlobalMutex;
-//        PointCloud mPlanePoints;
+        long unsigned int mnBALocalForKF; //used in local BA
+
+        //used for visualization
         int mRed;
         int mGreen;
         int mBlue;
@@ -43,6 +47,7 @@ namespace ORB_SLAM2 {
         cv::Mat mWorldPos; ///< Position in absolute coordinates
         std::map<KeyFrame*, int> mObservations;
         std::mutex mMutexPos;
+        std::mutex mMutexFeatures;
 
 //        void SetColor();
     };

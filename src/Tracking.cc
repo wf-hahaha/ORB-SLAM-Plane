@@ -151,7 +151,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
             mDepthMapFactor = 1.0f/mDepthMapFactor;
     }
 
-    mpPointCloudMapping = make_shared<PointCloudMapping>();
+    mpPointCloudMapping = make_shared<PointCloudMapping>(mpMap);
 
 }
 
@@ -273,6 +273,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
 
 void Tracking::Track()
 {
+    cout << "New Frame : " << mCurrentFrame.mnId << endl;
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;
@@ -772,6 +773,7 @@ void Tracking::CheckReplacedInLastFrame()
 
 bool Tracking::TrackReferenceKeyFrame()
 {
+    cout << "Track reference frame ... ";
     // Compute Bag of Words vector
     mCurrentFrame.ComputeBoW();
 
@@ -813,6 +815,7 @@ bool Tracking::TrackReferenceKeyFrame()
         }
     }
 
+    cout << " done !" << endl;
     return nmatchesMap>=10;
 }
 
@@ -884,6 +887,7 @@ void Tracking::UpdateLastFrame()
 
 bool Tracking::TrackWithMotionModel()
 {
+    cout << "Track Motion Frame ... " ;
     ORBmatcher matcher(0.9,true);
 
     // Update last frame pose according to its reference keyframe
@@ -943,7 +947,7 @@ bool Tracking::TrackWithMotionModel()
         mbVO = nmatchesMap<10;
         return nmatches>20;
     }
-
+    cout << " done !" << endl;
     return nmatchesMap>=10;
 }
 
@@ -951,11 +955,12 @@ bool Tracking::TrackLocalMap()
 {
     // We have an estimation of the camera pose and some map points tracked in the frame.
     // We retrieve the local map and try to find matches to points in the local map.
-
+    cout << "Track local map ..." ;
     UpdateLocalMap();
 
     SearchLocalPoints();
 
+//    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon);
     // Optimize Pose
     Optimizer::PoseOptimization(&mCurrentFrame);
     mnMatchesInliers = 0;
@@ -982,6 +987,7 @@ bool Tracking::TrackLocalMap()
         }
     }
 
+    cout << " done !" << endl;
     // Decide if the tracking was succesful
     // More restrictive if there was a relocalization recently
     if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<50)
@@ -1094,12 +1100,14 @@ void Tracking::CreateNewKeyFrame()
     {
         mCurrentFrame.UpdatePoseMatrices();
 
-        mpMap->AssociatePlanes(pKF, mfDThMon, mfAThMon);
+//        mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon);
 
-        for (int i = 0; i < pKF->mnPlaneNum; ++i) {
-            if(pKF->mvpMapPlanes[i])
+        for (int i = 0; i < mCurrentFrame.mnPlaneNum; ++i) {
+            if(mCurrentFrame.mvpMapPlanes[i] && !mCurrentFrame.mvbPlaneOutlier[i]) {
+                mCurrentFrame.mvpMapPlanes[i]->AddObservation(pKF, i);
                 continue;
-            cv::Mat p3D = pKF->ComputePlaneWorldCoeff(i);
+            }
+            cv::Mat p3D = mCurrentFrame.ComputePlaneWorldCoeff(i);
             MapPlane* pNewMP = new MapPlane(p3D, pKF, i);
             mpMap->AddMapPlane(pNewMP);
             pKF->AddMapPlane(pNewMP, i);
@@ -1168,7 +1176,7 @@ void Tracking::CreateNewKeyFrame()
 
     mpLocalMapper->SetNotStop(false);
 
-    mpPointCloudMapping->insertKeyFrame( pKF, mImGray, mImDepth );
+//    mpPointCloudMapping->insertKeyFrame( pKF, mImGray, mImDepth );
 
     mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKF;
