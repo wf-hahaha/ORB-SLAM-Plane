@@ -59,7 +59,7 @@ ORBextractor.minThFAST: 7
 Viewer.KeyFrameSize: 0.05
 Viewer.KeyFrameLineWidth: 1
 Viewer.GraphLineWidth: 0.9
-Viewer.PointSize:2
+Viewer.PointSize: 2
 Viewer.CameraSize: 0.08
 Viewer.CameraLineWidth: 3
 Viewer.ViewpointX: 0
@@ -68,12 +68,15 @@ Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
 Plane.MinSize: 1000
-Plane.AssociationDisRef: 0.15
-Plane.AssociationDisMon: 0.15
-Plane.AssociationAngRef: 0.965 # 15 degree
-Plane.AssociationAngMon: 0.965 # 15 degree
-#Plane.AssociationAngRef: 0.985 # 10 degree
-#Plane.AssociationAngMon: 0.985 # 10 degree
+Plane.k: 1.0
+Plane.AssociationDisRef: 0.1
+Plane.AssociationDisMon: 0.1
+#Plane.AssociationAngRef: 0.866 # 30 degree
+#Plane.AssociationAngMon: 0.866 # 30 degree
+#Plane.AssociationAngRef: 0.965 # 15 degree
+#Plane.AssociationAngMon: 0.965 # 15 degree
+Plane.AssociationAngRef: 0.985 # 10 degree
+Plane.AssociationAngMon: 0.985 # 10 degree
 
-SavePath.Frame: "CameraTrajectory_2.txt"
-SavePath.Keyframe: "KeyFrameTrajectory_2.txt"
+SavePath.Frame: "CameraTrajectory_cab2.txt"
+SavePath.Keyframe: "KeyFrameTrajectory.txt"

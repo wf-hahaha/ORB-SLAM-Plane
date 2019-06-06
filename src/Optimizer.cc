@@ -379,7 +379,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     vpEdgesPlane.reserve(M);
     vnIndexEdgePlane.reserve(M);
     std::set<int> vnVertexId;
-
+    double k = Config::Get<double>("Plane.k");
 //    cout << "-----------------------start---------------------------" << endl;
     {
         unique_lock<mutex> lock(MapPlane::mGlobalMutex);
@@ -403,7 +403,13 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pMP->mnId + 1)));
                 e->setMeasurement(Converter::toPlane3D(pFrame->mvPlaneCoefficients[i]));
                 //TODO
-                e->setInformation(Eigen::Matrix3d::Identity());
+                Eigen::Matrix3d Info;
+                Info << 57.3, 0, 0,
+                        0, 57.3, 0,
+                        0, 0, 100;
+
+                e->setInformation(Info);
+
                 g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
                 e->setRobustKernel(rk);
                 //TODO
@@ -779,8 +785,8 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
 
     vector<MapPlane*> vpMapPlane;
     vpMapPlane.reserve(nExpectedPlaneEdgeSize);
+    double k = Config::Get<double>("Plane.k");
 
-        cout << "add Plane in local BA" << endl;
         for (list<MapPlane *>::iterator lit = lLocalMapPlanes.begin(), lend = lLocalMapPlanes.end();
              lit != lend; lit++) {
 
@@ -805,7 +811,12 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
                     e->setMeasurement(Converter::toPlane3D(pKFi->mvPlaneCoefficients[mit->second]));
 
                     //TODO
-                    e->setInformation(Eigen::Matrix3d::Identity());
+                    Eigen::Matrix3d Info;
+                    Info << 57.3, 0, 0,
+                            0, 57.3, 0,
+                            0, 0, 100;
+                    e->setInformation(Info);
+
                     g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
                     e->setRobustKernel(rk);
                     rk->setDelta(thHuberStereo);
@@ -815,12 +826,10 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
                     vpEdgesPlane.push_back(e);
                     vpEdgeKFPlane.push_back(pKFi);
                     vpMapPlane.push_back(pMP);
-                    cout << pKFi->mnId << " , ";
+
                 }
 
             }
-
-            cout << endl;
         }
 
 
@@ -828,10 +837,8 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         if(*pbStopFlag)
             return;
 
-    cout << "before local BA optimation" << endl;
     optimizer.initializeOptimization();
     optimizer.optimize(5);
-    cout << "local BA ... 1" << endl;
     bool bDoMore= true;
 
     if(pbStopFlag)
@@ -891,7 +898,6 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     optimizer.optimize(10);
 
     }
-    cout << "local BA ... 2" << endl;
     vector<pair<KeyFrame*,MapPoint*> > vToErase;
     vToErase.reserve(vpEdgesMono.size()+vpEdgesStereo.size());
 
@@ -984,7 +990,6 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         pMP->SetWorldPos(Converter::toCvMat(vPoint->estimate()));
         pMP->UpdateNormalAndDepth();
     }
-    cout << "Local BA change plane" << endl;
     //Planes
     for(list<MapPlane*>::iterator lit=lLocalMapPlanes.begin(), lend=lLocalMapPlanes.end(); lit!=lend; lit++)
     {
@@ -992,7 +997,6 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         g2o::VertexPlane* vPlane = static_cast<g2o::VertexPlane*>(optimizer.vertex(pMP->mnId+maxPointid+1));
         pMP->SetWorldPos(Converter::toCvMat(vPlane->estimate()));
     }
-    cout << "Local BA with plane finished" << endl;
 }
 
 
