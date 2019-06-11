@@ -1130,10 +1130,18 @@ void Tracking::CreateNewKeyFrame()
 //        mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon);
 
         for (int i = 0; i < mCurrentFrame.mnPlaneNum; ++i) {
+            if(mCurrentFrame.mvpParallelPlanes[i]){
+                mCurrentFrame.mvpParallelPlanes[i]->AddParObservation(pKF,i);
+            }
+            if(mCurrentFrame.mvpVerticalPlanes[i]){
+                mCurrentFrame.mvpVerticalPlanes[i]->AddVerObservation(pKF,i);
+            }
+
             if(mCurrentFrame.mvpMapPlanes[i] && !mCurrentFrame.mvbPlaneOutlier[i]) {
                 mCurrentFrame.mvpMapPlanes[i]->AddObservation(pKF, i);
                 continue;
             }
+
             cv::Mat p3D = mCurrentFrame.ComputePlaneWorldCoeff(i);
             MapPlane* pNewMP = new MapPlane(p3D, pKF, i);
             mpMap->AddMapPlane(pNewMP);

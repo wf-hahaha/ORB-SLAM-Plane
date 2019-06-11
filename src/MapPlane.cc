@@ -32,6 +32,20 @@ namespace ORB_SLAM2{
         mObservations[pKF] = idx;
     }
 
+    void MapPlane::AddVerObservation(ORB_SLAM2::KeyFrame *pKF, int idx) {
+        unique_lock<mutex> lock(mMutexFeatures);
+        if(mVerObservations.count(pKF))
+            return;
+        mVerObservations[pKF] = idx;
+    }
+
+    void MapPlane::AddParObservation(ORB_SLAM2::KeyFrame *pKF, int idx) {
+        unique_lock<mutex> lock(mMutexFeatures);
+        if(mParObservations.count(pKF))
+            return;
+        mParObservations[pKF] = idx;
+    }
+
     void MapPlane::EraseObservation(ORB_SLAM2::KeyFrame *pKF) {
         unique_lock<mutex> lock(mMutexFeatures);
         if(mObservations.count(pKF)){
@@ -43,6 +57,18 @@ namespace ORB_SLAM2{
     {
         unique_lock<mutex> lock(mMutexFeatures);
         return mObservations;
+    }
+
+    map<ORB_SLAM2::KeyFrame*, int> MapPlane::GetVerObservations()
+    {
+        unique_lock<mutex> lock(mMutexFeatures);
+        return mVerObservations;
+    }
+
+    map<ORB_SLAM2::KeyFrame*, int> MapPlane::GetParObservations()
+    {
+        unique_lock<mutex> lock(mMutexFeatures);
+        return mParObservations;
     }
 
     int MapPlane::GetIndexInKeyFrame(ORB_SLAM2::KeyFrame *pKF) {

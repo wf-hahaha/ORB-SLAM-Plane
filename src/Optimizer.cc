@@ -382,6 +382,12 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     vpEdgesPlane.reserve(M);
     vnIndexEdgePlane.reserve(M);
     std::set<int> vnVertexId;
+
+    double angleInfo = Config::Get<double>("Plane.AngleInfo");
+    double disInfo = Config::Get<double>("Plane.DistanceInfo");
+    double parInfo = Config::Get<double>("Plane.ParallelInfo");
+    double verInfo = Config::Get<double>("Plane.VerticalInfo");
+
 //    cout << "-----------------------start---------------------------" << endl;
     {
         unique_lock<mutex> lock(MapPlane::mGlobalMutex);
@@ -410,13 +416,9 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 e->setMeasurement(Converter::toPlane3D(pFrame->mvPlaneCoefficients[i]));
                 //TODO
                 Eigen::Matrix3d Info;
-//                Info << 57.3, 0, 0,
-//                        0, 57.3, 0,
-//                        0, 0, 100;   // 1 degree 1 cm
-                Info << 19.1, 0, 0,
-                        0, 19.1, 0,
-                        0, 0, 33;      //3 degree 3 cm
-
+                Info << angleInfo, 0, 0,
+                        0, angleInfo, 0,
+                        0, 0, disInfo;
                 e->setInformation(Info);
 
                 g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
@@ -452,8 +454,8 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 e->setMeasurement(Converter::toPlane3D(pFrame->mvPlaneCoefficients[i]));
                 //TODO
                 Eigen::Matrix2d Info;
-                Info << 5.73, 0,
-                        0, 5.73;
+                Info << parInfo, 0,
+                        0, parInfo;
 
                 e->setInformation(Info);
 
@@ -486,8 +488,8 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 e->setMeasurement(Converter::toPlane3D(pFrame->mvPlaneCoefficients[i]));
                 //TODO
                 Eigen::Matrix2d Info;
-                Info << 5.73, 0,
-                        0, 5.73;
+                Info << verInfo, 0,
+                        0, verInfo;
 
                 e->setInformation(Info);
 
@@ -700,6 +702,30 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
                     lFixedCameras.push_back(pKFi);
             }
         }
+        map<KeyFrame*,int> verObservations = (*lit)->GetVerObservations();
+        for(map<KeyFrame*,int>::iterator mit=verObservations.begin(), mend=verObservations.end(); mit!=mend; mit++)
+        {
+            KeyFrame* pKFi = mit->first;
+
+            if(pKFi->mnBALocalForKF!=pKF->mnId && pKFi->mnBAFixedForKF!=pKF->mnId)
+            {
+                pKFi->mnBAFixedForKF=pKF->mnId;
+                if(!pKFi->isBad())
+                    lFixedCameras.push_back(pKFi);
+            }
+        }
+        map<KeyFrame*,int> parObservations = (*lit)->GetParObservations();
+        for(map<KeyFrame*,int>::iterator mit=parObservations.begin(), mend=parObservations.end(); mit!=mend; mit++)
+        {
+            KeyFrame* pKFi = mit->first;
+
+            if(pKFi->mnBALocalForKF!=pKF->mnId && pKFi->mnBAFixedForKF!=pKF->mnId)
+            {
+                pKFi->mnBAFixedForKF=pKF->mnId;
+                if(!pKFi->isBad())
+                    lFixedCameras.push_back(pKFi);
+            }
+        }
     }
 
     // Setup optimizer
@@ -863,6 +889,11 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     vector<MapPlane*> vpMapPlane;
     vpMapPlane.reserve(nExpectedPlaneEdgeSize);
 
+    double angleInfo = Config::Get<double>("Plane.AngleInfo");
+    double disInfo = Config::Get<double>("Plane.DistanceInfo");
+    double parInfo = Config::Get<double>("Plane.ParallelInfo");
+    double verInfo = Config::Get<double>("Plane.VerticalInfo");
+
     for (list<MapPlane *>::iterator lit = lLocalMapPlanes.begin(), lend = lLocalMapPlanes.end();
          lit != lend; lit++) {
 
@@ -888,12 +919,9 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
 
                 //TODO
                 Eigen::Matrix3d Info;
-//                Info << 57.3, 0, 0,
-//                        0, 57.3, 0,
-//                        0, 0, 100;   // 1 degree 1 cm
-                Info << 19.1, 0, 0,
-                        0, 19.1, 0,
-                        0, 0, 33;      //3 degree 3 cm
+                Info << angleInfo, 0, 0,
+                        0, angleInfo, 0,
+                        0, 0, disInfo;
                 e->setInformation(Info);
 
                 g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
@@ -905,11 +933,60 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
                 vpEdgesPlane.push_back(e);
                 vpEdgeKFPlane.push_back(pKFi);
                 vpMapPlane.push_back(pMP);
-
             }
+        }
 
+        const map<KeyFrame *, int> verObservations = pMP->GetVerObservations();
+        for (map<KeyFrame *, int>::const_iterator mit = verObservations.begin(), mend = verObservations.end();
+             mit != mend; mit++) {
+            KeyFrame *pKFi = mit->first;
+            if (!pKFi->isBad()) {
+                g2o::EdgeVerticalPlane *e = new g2o::EdgeVerticalPlane();
+                if (optimizer.vertex(id) == NULL || optimizer.vertex(pKFi->mnId) == NULL)
+                    continue;
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(id)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pKFi->mnId)));
+                e->setMeasurement(Converter::toPlane3D(pKFi->mvPlaneCoefficients[mit->second]));
+                //TODO
+                Eigen::Matrix2d Info;
+                Info << verInfo, 0,
+                        0, verInfo;
+                e->setInformation(Info);
+                g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
+                e->setRobustKernel(rk);
+                //TODO
+                rk->setDelta(thHuberStereo);
+                optimizer.addEdge(e);
+            }
+        }
+
+        const map<KeyFrame *, int> parObservations = pMP->GetParObservations();
+        for (map<KeyFrame *, int>::const_iterator mit = parObservations.begin(), mend = parObservations.end();
+             mit != mend; mit++) {
+            KeyFrame *pKFi = mit->first;
+            if (!pKFi->isBad()) {
+                g2o::EdgeParallelPlane *e = new g2o::EdgeParallelPlane();
+                if (optimizer.vertex(id) == NULL || optimizer.vertex(pKFi->mnId) == NULL)
+                    continue;
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(id)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pKFi->mnId)));
+                e->setMeasurement(Converter::toPlane3D(pKFi->mvPlaneCoefficients[mit->second]));
+                //TODO
+                Eigen::Matrix2d Info;
+                Info << parInfo, 0,
+                        0, parInfo;
+                e->setInformation(Info);
+                g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
+                e->setRobustKernel(rk);
+                //TODO
+                rk->setDelta(thHuberStereo);
+                optimizer.addEdge(e);
+            }
         }
     }
+
+
+
 
 
     if(pbStopFlag)

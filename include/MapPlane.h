@@ -30,8 +30,13 @@ namespace ORB_SLAM2 {
         cv::Mat GetWorldPos();
 
         void AddObservation(KeyFrame* pKF, int idx);
+        void AddParObservation(KeyFrame* pKF, int idx);
+        void AddVerObservation(KeyFrame* pKF, int idx);
+
         void EraseObservation(KeyFrame* pKF);
         map<KeyFrame*, int> GetObservations();
+        map<KeyFrame*, int> GetParObservations();
+        map<KeyFrame*, int> GetVerObservations();
         int GetIndexInKeyFrame(KeyFrame *pKF);
     public:
         long unsigned int mnId; ///< Global ID for MapPlane;
@@ -46,6 +51,9 @@ namespace ORB_SLAM2 {
     protected:
         cv::Mat mWorldPos; ///< Position in absolute coordinates
         std::map<KeyFrame*, int> mObservations;
+        std::map<KeyFrame*, int> mParObservations;
+        std::map<KeyFrame*, int> mVerObservations;
+
         std::mutex mMutexPos;
         std::mutex mMutexFeatures;
 
