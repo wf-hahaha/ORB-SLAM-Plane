@@ -204,6 +204,9 @@ public:
     std::vector<cv::Mat> mvPlaneCoefficients;
     int mnPlaneNum;
     std::vector<MapPlane*> mvpMapPlanes;
+    std::vector<MapPlane*> mvpParallelPlanes;
+    std::vector<MapPlane*> mvpVerticalPlanes;
+    bool mbNewPlane; // used to determine a keyframe
 
     void AddMapPlane(MapPlane* pMP, const int &idx);
     void EraseMapPlaneMatch(const int &idx);

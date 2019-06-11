@@ -68,15 +68,26 @@ Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
 Plane.MinSize: 1000
-Plane.k: 1.0
-Plane.AssociationDisRef: 0.1
-Plane.AssociationDisMon: 0.1
+Plane.AssociationDisRef: 0.15
+Plane.AssociationDisMon: 0.15
 #Plane.AssociationAngRef: 0.866 # 30 degree
 #Plane.AssociationAngMon: 0.866 # 30 degree
-#Plane.AssociationAngRef: 0.965 # 15 degree
-#Plane.AssociationAngMon: 0.965 # 15 degree
-Plane.AssociationAngRef: 0.985 # 10 degree
-Plane.AssociationAngMon: 0.985 # 10 degree
+Plane.AssociationAngRef: 0.965 # 15 degree
+Plane.AssociationAngMon: 0.965 # 15 degree
+#Plane.AssociationAngRef: 0.985 # 10 degree
+#Plane.AssociationAngMon: 0.985 # 10 degree
 
-SavePath.Frame: "CameraTrajectory_cab2.txt"
+
+#Plane.VerticalThreshold: 0.0523 # 87 degree
+Plane.VerticalThreshold: 0.08716 # 85 degree
+#Plane.VerticalThreshold: 0.0 # no vertical constraint
+Plane.ParallelThreshold: 0.9962 # 5 degree
+#Plane.ParallelThreshold: 1.9962 # 5 degree
+
+#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_notexture_far/planeORB.txt"
+#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_notexture_near/planeORB.txt"
+#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_texture_far/planeORB_pv.txt"
+SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_texture_near/planeORB_test.txt"
+#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_cabinet/planeORB2.txt"
+#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_large_cabinet/planeORB.txt"
 SavePath.Keyframe: "KeyFrameTrajectory.txt"

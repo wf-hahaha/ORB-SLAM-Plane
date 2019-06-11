@@ -69,12 +69,22 @@ Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
 Plane.MinSize: 1000
-Plane.AssociationDisRef: 0.15
-Plane.AssociationDisMon: 0.15
+Plane.AssociationDisRef: 0.10
+Plane.AssociationDisMon: 0.10
 Plane.AssociationAngRef: 0.965 # 15 degree
 Plane.AssociationAngMon: 0.965 # 15 degree
+#Plane.AssociationAngRef: 0.939 # 20 degree
+#Plane.AssociationAngMon: 0.939 # 20 degree
 #Plane.AssociationAngRef: 0.985 # 10 degree
 #Plane.AssociationAngMon: 0.985 # 10 degree
 
-SavePath.Frame: "CameraTrajectory_2.txt"
-SavePath.Keyframe: "KeyFrameTrajectory_2.txt"
+#Plane.VerticalThreshold: 0.0523 # 87 degree
+Plane.VerticalThreshold: 0.08716 # 85 degree
+#Plane.VerticalThreshold: 0.0 # no vertical constraint
+Plane.ParallelThreshold: 0.9962 # 5 degree
+#Plane.ParallelThreshold: 1.9962 # no parallel constraint
+
+#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg2_desk_with_person/planeORB.txt"
+#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg2_pioneer_slam/planeORB.txt"
+SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg2_pioneer_slam3/planeORB.txt"
+SavePath.Keyframe: "KeyFrameTrajectory.txt"

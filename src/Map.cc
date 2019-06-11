@@ -173,13 +173,13 @@ void Map::AssociatePlanes(ORB_SLAM2::KeyFrame *pF, const float &dTh, const float
     }
 }
 void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &aTh) {
-        bool find = true;
+        bool finding = true;
         clock_t time1 = clock();
         unique_lock<mutex> lock(mMutexMap);
         for (int i = 0; i < pF.mnPlaneNum; ++i) {
-            find = true;
+            finding = true;
 //            pF.mvpMapPlanes[i] = nullptr;
-            for (int j = 0; find && j < mvpMapPlanes.size(); ++j) {
+            for (int j = 0; finding && j < mvpMapPlanes.size(); ++j) {
                 cv::Mat pM = pF.ComputePlaneWorldCoeff(i);
                 cv::Mat pW = mvpMapPlanes[j]->GetWorldPos();
                 float d = pM.at<float>(3,0) - pW.at<float>(3,0);
@@ -191,12 +191,64 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                 if(angle < aTh)
                     continue;
 
-                find = false;
+                finding = false;
                 pF.mvpMapPlanes[i] = mvpMapPlanes[j];
             }
+            if(finding)
+                pF.mbNewPlane = true;
         }
 //        cout<< "Time of  association : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     }
+
+    void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &aTh, const float &verTh,
+                              const float &parTh) {
+
+        unique_lock<mutex> lock(mMutexMap);
+        bool find, findVer, findPer;
+        for (int i = 0; i < pF.mnPlaneNum; ++i) {
+            find = true;
+            findVer = true;
+            findPer = true;
+            for (int j = 0; (find || findVer || findPer) && j < mvpMapPlanes.size(); ++j) {
+                cv::Mat pM = pF.ComputePlaneWorldCoeff(i);
+                cv::Mat pW = mvpMapPlanes[j]->GetWorldPos();
+
+                float angle = pM.at<float>(0, 0) * pW.at<float>(0, 0) +
+                              pM.at<float>(1, 0) * pW.at<float>(1, 0) +
+                              pM.at<float>(2, 0) * pW.at<float>(2, 0);
+                float d = pM.at<float>(3, 0) - pW.at<float>(3, 0);
+
+//                cout << " agnel : " << angle << "  d :" << d << "  ";
+                if (find && angle > aTh && d < dTh && d > -dTh) // associate plane
+                {
+//                    cout << "  associate!" << endl;
+                    find = false;
+                    pF.mvpMapPlanes[i] = mvpMapPlanes[j];
+                    continue;
+                }
+
+                // vertical planes
+                if (findVer && angle < verTh && angle > -verTh) {
+//                    cout << "  vertical!" << endl;
+                    findVer = false;
+                    pF.mvpVerticalPlanes[i] = mvpMapPlanes[j];
+                    continue;
+                }
+
+                //parallel planes
+                if (findPer && angle > parTh) {
+//                    cout << "  parallel!" << endl;
+                    findPer = false;
+                    pF.mvpParallelPlanes[i] = mvpMapPlanes[j];
+                }
+            }
+            if (find)
+                pF.mbNewPlane = true;
+//            cout << endl;
+        }
+//        cout<< "Time of  association : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
+    }
+
 } //namespace ORB_SLAM
 
 

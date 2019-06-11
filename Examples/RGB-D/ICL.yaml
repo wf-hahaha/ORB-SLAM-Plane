@@ -68,7 +68,7 @@ Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
 
-Plane.MinSize: 300
+Plane.MinSize: 500
 Plane.AssociationDisRef: 0.15
 Plane.AssociationDisMon: 0.15
 Plane.AssociationAngRef: 0.965 # 15 degree
@@ -76,6 +76,12 @@ Plane.AssociationAngMon: 0.965 # 15 degree
 #Plane.AssociationAngRef: 0.985 # 10 degree
 #Plane.AssociationAngMon: 0.985 # 10 degree
 
-SavePath.Frame: "CameraTrajectory_icl.txt"
-SavePath.Keyframe: "KeyFrameTrajectory_icl.txt"
+#Plane.VerticalThreshold: 0.0523 # 87 degree
+Plane.VerticalThreshold: 0.08716 # 85 degree
+#Plane.VerticalThreshold: 0.0 # no vertical constraint
+Plane.ParallelThreshold: 0.9962 # 5 degree
+#Plane.ParallelThreshold: 1.9962 # no parallel constraint
+
+SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/traj0_frei_png/planeORB_pv.txt"
+SavePath.Keyframe: "KeyFrameTrajectory.txt"
 

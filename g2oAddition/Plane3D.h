@@ -87,6 +87,24 @@ namespace g2o {
                 return Vector3D(azimuth(n), elevation(n), d);
             }
 
+            inline Vector2D ominus_ver(const Plane3D& plane){
+                //construct the rotation that would bring the plane normal in (1 0 0)
+                Vector3D v = normal().cross(plane.normal());
+                Eigen::AngleAxisd ver(M_PI/2, v/v.norm());
+                Vector3D b = ver * normal();
+
+                Matrix3D R = rotation(b).transpose();
+                Vector3D n = R*plane.normal();
+                return Vector2D(azimuth(n), elevation(n));
+            }
+
+            inline Vector2D ominus_par(const Plane3D& plane){
+                //construct the rotation that would bring the plane normal in (1 0 0)
+                Matrix3D R=rotation(normal()).transpose();
+                Vector3D n=R*plane.normal();
+
+                return Vector2D(azimuth(n), elevation(n));
+            }
             //protected:
 
             static inline void normalize(Vector4D& coeffs) {

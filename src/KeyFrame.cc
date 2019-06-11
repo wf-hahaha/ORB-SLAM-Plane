@@ -43,7 +43,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mpORBvocabulary(F.mpORBvocabulary), mbFirstConnection(true), mpParent(NULL), mbNotErase(false),
     mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap),
     mvPlanePoints(F.mvPlanePoints), mvPlaneCoefficients(F.mvPlaneCoefficients), mnPlaneNum(F.mnPlaneNum),
-    mvpMapPlanes(F.mvpMapPlanes)
+    mvpMapPlanes(F.mvpMapPlanes), mbNewPlane(F.mbNewPlane), mvpParallelPlanes(F.mvpParallelPlanes), mvpVerticalPlanes(F.mvpVerticalPlanes)
 {
     mnId=nNextId++;
 

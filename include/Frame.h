@@ -209,10 +209,12 @@ public:
     std::vector<PointCloud> mvPlanePoints;
     std::vector<cv::Mat> mvPlaneCoefficients;
     std::vector<MapPlane*> mvpMapPlanes;
+    std::vector<MapPlane*> mvpParallelPlanes;
+    std::vector<MapPlane*> mvpVerticalPlanes;
     // Flag to identify outlier planes new planes.
     std::vector<bool> mvbPlaneOutlier;
     int mnPlaneNum;
-
+    bool mbNewPlane; // used to determine a keyframe
 private:
 
     // Undistort keypoints given OpenCV distortion parameters.

@@ -61,6 +61,9 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mfAThRef = fSettings["Plane.AssociationAngRef"];
     mfAThMon = fSettings["Plane.AssociationAngMon"];
 
+    mfVerTh = fSettings["Plane.VerticalThreshold"];
+    mfParTh = fSettings["Plane.ParallelThreshold"];
+
     cv::Mat K = cv::Mat::eye(3,3,CV_32F);
     K.at<float>(0,0) = fx;
     K.at<float>(1,1) = fy;
@@ -790,7 +793,7 @@ bool Tracking::TrackReferenceKeyFrame()
     mCurrentFrame.mvpMapPoints = vpMapPointMatches;
     mCurrentFrame.SetPose(mLastFrame.mTcw);
 
-    mpMap->AssociatePlanes(mCurrentFrame, mfDThRef, mfAThRef);
+    mpMap->AssociatePlanes(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
 
     Optimizer::PoseOptimization(&mCurrentFrame);
 
@@ -916,7 +919,7 @@ bool Tracking::TrackWithMotionModel()
     if(nmatches<20)
         return false;
 
-    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon);
+    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
 
     // Optimize frame pose with all matches
     Optimizer::PoseOptimization(&mCurrentFrame);
@@ -955,7 +958,6 @@ bool Tracking::TrackLocalMap()
 {
     // We have an estimation of the camera pose and some map points tracked in the frame.
     // We retrieve the local map and try to find matches to points in the local map.
-    cout << "Track local map ..." ;
     UpdateLocalMap();
 
     SearchLocalPoints();
@@ -986,8 +988,6 @@ bool Tracking::TrackLocalMap()
 
         }
     }
-
-    cout << " done !" << endl;
     // Decide if the tracking was succesful
     // More restrictive if there was a relocalization recently
     if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<50)
@@ -1009,6 +1009,8 @@ bool Tracking::NeedNewKeyFrame()
     if(mpLocalMapper->isStopped() || mpLocalMapper->stopRequested())
         return false;
 
+
+
     const int nKFs = mpMap->KeyFramesInMap();
 
     // Do not insert keyframes if not enough frames have passed from last relocalisation
@@ -1023,6 +1025,7 @@ bool Tracking::NeedNewKeyFrame()
 
     // Local Mapping accept keyframes?
     bool bLocalMappingIdle = mpLocalMapper->AcceptKeyFrames();
+
 
     // Check how many "close" points are being tracked and how many could be potentially created.
     int nNonTrackedClose = 0;
@@ -1082,8 +1085,32 @@ bool Tracking::NeedNewKeyFrame()
                 return false;
         }
     }
-    else
-        return false;
+
+    //Check the current frame whether has a new plane
+    if(mCurrentFrame.mbNewPlane){
+        // If the mapping accepts keyframes, insert keyframe.
+        // Otherwise send a signal to interrupt BA
+        cout << "New KeyFrame because of new plane!" << endl;
+        if(bLocalMappingIdle)
+        {
+            return true;
+        }
+        else
+        {
+            mpLocalMapper->InterruptBA();
+            if(mSensor!=System::MONOCULAR)
+            {
+                if(mpLocalMapper->KeyframesInQueue()<3)
+                    return true;
+                else
+                    return false;
+            }
+            else
+                return false;
+        }
+    }
+
+    return false;
 }
 
 void Tracking::CreateNewKeyFrame()

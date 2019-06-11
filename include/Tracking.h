@@ -225,6 +225,9 @@ protected:
     float mfDThMon;
     float mfAThRef;
     float mfAThMon;
+
+    float mfVerTh;
+    float mfParTh;
 };
 
 } //namespace ORB_SLAM

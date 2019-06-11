@@ -57,7 +57,7 @@ public:
 
     void AssociatePlanes(KeyFrame* pF, const float &dTh, const float &aTh);
     void AssociatePlanes(Frame& pF, const float &dTh, const float &aTh);
-
+    void AssociatePlanes(Frame &pF, const float &dTh, const float &aTh, const float &verTh, const float &parTh);
     std::vector<KeyFrame*> GetAllKeyFrames();
     std::vector<MapPoint*> GetAllMapPoints();
     std::vector<MapPoint*> GetReferenceMapPoints();
