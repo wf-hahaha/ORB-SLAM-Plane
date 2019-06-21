@@ -201,6 +201,7 @@ public:
 
     //For PointCloud
     std::vector<PointCloud> mvPlanePoints;
+    std::vector<PointCloud> mvBoundaryPoints;
     std::vector<cv::Mat> mvPlaneCoefficients;
     int mnPlaneNum;
     std::vector<MapPlane*> mvpMapPlanes;

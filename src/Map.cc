@@ -200,15 +200,24 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
 //        cout<< "Time of  association : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     }
 
-    void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &aTh, const float &verTh,
-                              const float &parTh) {
+    void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &aTh,
+            const float &verTh, const float &parTh, bool out) {
 
         unique_lock<mutex> lock(mMutexMap);
         bool find, findVer, findPer;
+        pF.mbNewPlane = false;
+
+        if(out)
+            cout << "Plane associate in map  " << pF.mnId << " : " << endl;
+
         for (int i = 0; i < pF.mnPlaneNum; ++i) {
             find = true;
             findVer = true;
             findPer = true;
+            pF.mvpMapPlanes[i] = static_cast<MapPlane*>(nullptr);
+            pF.mvpVerticalPlanes[i] = static_cast<MapPlane*>(nullptr);
+            pF.mvpParallelPlanes[i] = static_cast<MapPlane*>(nullptr);
+
             for (int j = 0; (find || findVer || findPer) && j < mvpMapPlanes.size(); ++j) {
                 cv::Mat pM = pF.ComputePlaneWorldCoeff(i);
                 cv::Mat pW = mvpMapPlanes[j]->GetWorldPos();
@@ -217,11 +226,12 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                               pM.at<float>(1, 0) * pW.at<float>(1, 0) +
                               pM.at<float>(2, 0) * pW.at<float>(2, 0);
                 float d = pM.at<float>(3, 0) - pW.at<float>(3, 0);
-
-//                cout << " agnel : " << angle << "  d :" << d << "  ";
-                if (find && angle > aTh && d < dTh && d > -dTh) // associate plane
+                if(out)
+                    cout << " angle : " << angle << "  d :" << d << "  ";
+                if (find && (angle > aTh || angle < -aTh) && d < dTh && d > -dTh) // associate plane
                 {
-//                    cout << "  associate!" << endl;
+                    if(out)
+                        cout << "  associate!" << endl;
                     find = false;
                     pF.mvpMapPlanes[i] = mvpMapPlanes[j];
                     continue;
@@ -229,25 +239,214 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
 
                 // vertical planes
                 if (findVer && angle < verTh && angle > -verTh) {
-//                    cout << "  vertical!" << endl;
+                    if(out)
+                        cout << "  vertical!" << endl;
                     findVer = false;
                     pF.mvpVerticalPlanes[i] = mvpMapPlanes[j];
                     continue;
                 }
 
                 //parallel planes
-                if (findPer && angle > parTh) {
-//                    cout << "  parallel!" << endl;
+                if (findPer && (angle > parTh || angle < -parTh)) {
+                    if(out)
+                        cout << "  parallel!" << endl;
                     findPer = false;
                     pF.mvpParallelPlanes[i] = mvpMapPlanes[j];
+                }else{
+                    if(out)
+                        cout << endl;
                 }
             }
-            if (find)
+            if (find) {
                 pF.mbNewPlane = true;
-//            cout << endl;
+                if(out)
+                    cout << "Find New Plane! " << endl;
+            }
+            if(out)
+                cout << endl;
         }
+
 //        cout<< "Time of  association : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     }
+
+    void Map::AssociatePlanesInFrame(ORB_SLAM2::Frame &pF, const float &dTh, const float &aTh, const float &verTh,
+                                     const float &parTh, bool out) {
+
+        unique_lock<mutex> lock(mMutexMap);
+        bool find, findVer, findPer;
+        pF.mbNewPlane = false;
+
+        if(out)
+            cout << "Plane associate in map  ID: " << pF.mnId << " : " << endl;
+
+        for (int i = 0; i < pF.mnPlaneNum; ++i) {
+            find = true;
+            findVer = true;
+            findPer = true;
+            pF.mvpMapPlanes[i] = static_cast<MapPlane*>(nullptr);
+            pF.mvpVerticalPlanes[i] = static_cast<MapPlane*>(nullptr);
+            pF.mvpParallelPlanes[i] = static_cast<MapPlane*>(nullptr);
+            cv::Mat pM = pF.mvPlaneCoefficients[i];
+//            cout << "observe plane:  " << i << "  " << pM << endl;
+
+            for (int j = 0; (find || findVer || findPer) && j < mvpMapPlanes.size(); ++j) {
+                cv::Mat pW = ComputePlaneInFrame(pF,j);
+                float angle = pM.at<float>(0, 0) * pW.at<float>(0, 0) +
+                              pM.at<float>(1, 0) * pW.at<float>(1, 0) +
+                              pM.at<float>(2, 0) * pW.at<float>(2, 0);
+                float d = pM.at<float>(3, 0) - pW.at<float>(3, 0);
+                if(out)
+                    cout << " angle : " << angle << "  d :" << d << "  ";
+                if (find && (angle > aTh || angle < -aTh) && d < dTh && d > -dTh) // associate plane
+                {
+                    if(out)
+                        cout << "  associate!" << endl;
+                    find = false;
+                    pF.mvpMapPlanes[i] = mvpMapPlanes[j];
+                    continue;
+                }
+
+                // vertical planes
+                if (findVer && angle < verTh && angle > -verTh) {
+                    if(out)
+                        cout << "  vertical!" << endl;
+                    findVer = false;
+                    pF.mvpVerticalPlanes[i] = mvpMapPlanes[j];
+                    continue;
+                }
+
+                //parallel planes
+                if (findPer && (angle > parTh || angle < -parTh)) {
+                    if(out)
+                        cout << "  parallel!" << endl;
+                    findPer = false;
+                    pF.mvpParallelPlanes[i] = mvpMapPlanes[j];
+                }else{
+                    if(out)
+                        cout << endl;
+                }
+            }
+            if (find) {
+                pF.mbNewPlane = true;
+                if(out)
+                    cout << "Find New Plane! " << endl;
+            }
+            if(out)
+                cout << endl;
+        }
+
+//        cout<< "Time of  association : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
+    }
+
+    void Map::AssociatePlanesByBoundary(ORB_SLAM2::Frame &pF, const float &dTh, const float &aTh, const float &verTh,
+                                        const float &parTh, bool out) {
+
+        unique_lock<mutex> lock(mMutexMap);
+        pF.mbNewPlane = false;
+
+        if(out)
+            cout << "Plane associate in map  ID :  " << pF.mnId << "   num of Plane: "  << pF.mnPlaneNum << " TH: " << dTh << endl;
+
+        for (int i = 0; i < pF.mnPlaneNum; ++i) {
+
+            cv::Mat pM = pF.ComputePlaneWorldCoeff(i);
+            int p = -1;
+            if(out)
+                cout << " plane  " << i << " : " << endl;
+            float ldTh = dTh;
+            float lverTh = verTh;
+            float lparTh = parTh;
+            for (int j = 0;j < mvpMapPlanes.size(); ++j) {
+                cv::Mat pW = mvpMapPlanes[j]->GetWorldPos();
+
+                float angle = pM.at<float>(0, 0) * pW.at<float>(0, 0) +
+                              pM.at<float>(1, 0) * pW.at<float>(1, 0) +
+                              pM.at<float>(2, 0) * pW.at<float>(2, 0);
+
+                if(out)
+                    cout << j << ":  angle : " << angle << endl;
+
+                if ((angle > aTh || angle < -aTh)) // associate plane
+                {
+
+                    double dis = PointDistanceFromPlane(pM, mvpMapPlanes[j]->mvBoundaryPoints, out);
+                    if(dis < ldTh) {
+                        ldTh = dis;
+                        if (out)
+                            cout << "  associate!" << endl;
+                        pF.mvpMapPlanes[i] = static_cast<MapPlane*>(nullptr);
+                        pF.mvpMapPlanes[i] = mvpMapPlanes[j];
+
+                        p = j;
+                        continue;
+                    }
+                }
+
+                // vertical planes
+                if (angle < lverTh && angle > -lverTh) {
+                    if(out)
+                        cout << "  vertical!" << endl;
+                    lverTh = abs(angle);
+                    pF.mvpVerticalPlanes[i] = static_cast<MapPlane*>(nullptr);
+                    pF.mvpVerticalPlanes[i] = mvpMapPlanes[j];
+                    continue;
+                }
+
+                //parallel planes
+                if ((angle > lparTh || angle < -lparTh)) {
+                    if(out)
+                        cout << "  parallel!" << endl;
+                    lparTh = abs(angle);
+                    pF.mvpParallelPlanes[i] = static_cast<MapPlane*>(nullptr);
+                    pF.mvpParallelPlanes[i] = mvpMapPlanes[j];
+                }else{
+                    if(out)
+                        cout << endl;
+                }
+            }
+            if (p == -1) {
+                pF.mbNewPlane = true;
+                if(out)
+                    cout << "Find New Plane! " << endl;
+            }else{
+                mvpMapPlanes[p]->UpdateBoundary(pF, i);
+            }
+
+            if(out)
+                cout << endl;
+        }
+
+//        cout<< "Time of  association : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
+    }
+
+
+    cv::Mat Map::ComputePlaneInFrame(const ORB_SLAM2::Frame &pF, int i) {
+        cv::Mat temp;
+        cv::transpose(pF.mTwc, temp);
+        return temp*(mvpMapPlanes[i]->GetWorldPos());
+}
+
+double Map::PointDistanceFromPlane(const cv::Mat &plane, PointCloud::Ptr boundry, bool out) {
+//    double sum = 0;
+    double res = 100;
+    if(out)
+        cout << " compute dis: " << endl;
+    for(auto p : boundry->points){
+        double dis = abs(plane.at<float>(0, 0) * p.x +
+                   plane.at<float>(1, 0) * p.y +
+                   plane.at<float>(2, 0) * p.z +
+                   plane.at<float>(3, 0));
+        if(dis < res)
+            res = dis;
+//        if(out)
+//            cout << " " << dis << " ";
+//        sum += dis;
+    }
+//    res = sum / boundry->points.size();
+    if(out)
+        cout << endl << "ave : " << res << endl;
+    return res;
+}
 
 } //namespace ORB_SLAM
 

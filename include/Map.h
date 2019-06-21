@@ -27,7 +27,11 @@
 #include <set>
 
 #include <mutex>
-
+#include <pcl/common/transforms.h>
+#include <pcl/point_types.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/ModelCoefficients.h>
 
 
 namespace ORB_SLAM2
@@ -41,6 +45,8 @@ class Frame;
 class Map
 {
 public:
+    typedef pcl::PointXYZRGB PointT;
+    typedef pcl::PointCloud <PointT> PointCloud;
     Map();
 
     void AddKeyFrame(KeyFrame* pKF);
@@ -57,7 +63,19 @@ public:
 
     void AssociatePlanes(KeyFrame* pF, const float &dTh, const float &aTh);
     void AssociatePlanes(Frame& pF, const float &dTh, const float &aTh);
-    void AssociatePlanes(Frame &pF, const float &dTh, const float &aTh, const float &verTh, const float &parTh);
+    void AssociatePlanes(Frame &pF, const float &dTh, const float &aTh,
+                         const float &verTh, const float &parTh,
+                         bool out = false);
+    void AssociatePlanesInFrame(Frame &pF, const float &dTh, const float &aTh,
+                         const float &verTh, const float &parTh,
+                         bool out = false);
+    void AssociatePlanesByBoundary(Frame &pF, const float &dTh, const float &aTh,
+                                   const float &verTh, const float &parTh,
+                                   bool out = false);
+
+    cv::Mat ComputePlaneInFrame(const Frame& pF, int i);
+    double PointDistanceFromPlane(const cv::Mat& plane, PointCloud::Ptr boundry, bool out = false);
+
     std::vector<KeyFrame*> GetAllKeyFrames();
     std::vector<MapPoint*> GetAllMapPoints();
     std::vector<MapPoint*> GetReferenceMapPoints();

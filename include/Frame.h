@@ -42,7 +42,10 @@
 #include <pcl/ModelCoefficients.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/visualization/cloud_viewer.h>
-
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/segmentation/organized_multi_plane_segmentation.h>
+#include <pcl/features/integral_image_normal.h>
 namespace ORB_SLAM2
 {
 #define FRAME_GRID_ROWS 48
@@ -114,6 +117,7 @@ public:
 
     //Plane functions
     void ComputePlanesFromPointCloud(const cv::Mat &imDepth);
+    void ComputePlanesFromOrganizedPointCloud(const cv::Mat &imDepth);
     cv::Mat ComputePlaneWorldCoeff(const int &idx);
 
 public:
@@ -180,6 +184,7 @@ public:
 
     // Camera pose.
     cv::Mat mTcw;
+    cv::Mat mTwc;
 
     // Current and Next Frame id.
     static long unsigned int nNextId;
@@ -207,6 +212,7 @@ public:
 
     //For PointCloud
     std::vector<PointCloud> mvPlanePoints;
+    std::vector<PointCloud> mvBoundaryPoints;
     std::vector<cv::Mat> mvPlaneCoefficients;
     std::vector<MapPlane*> mvpMapPlanes;
     std::vector<MapPlane*> mvpParallelPlanes;

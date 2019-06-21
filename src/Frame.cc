@@ -50,7 +50,7 @@ Frame::Frame(const Frame &frame)
      mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2),
      mvPlanePoints(frame.mvPlanePoints), mvPlaneCoefficients(frame.mvPlaneCoefficients), mbNewPlane(frame.mbNewPlane),
      mvpMapPlanes(frame.mvpMapPlanes), mnPlaneNum(frame.mnPlaneNum), mvbPlaneOutlier(frame.mvbPlaneOutlier),
-     mvpParallelPlanes(frame.mvpParallelPlanes), mvpVerticalPlanes(frame.mvpVerticalPlanes)
+     mvpParallelPlanes(frame.mvpParallelPlanes), mvpVerticalPlanes(frame.mvpVerticalPlanes), mvBoundaryPoints(frame.mvBoundaryPoints)
 {
     for(int i=0;i<FRAME_GRID_COLS;i++)
         for(int j=0; j<FRAME_GRID_ROWS; j++)
@@ -174,7 +174,8 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 
     AssignFeaturesToGrid();
 
-    ComputePlanesFromPointCloud(imDepth);
+//    ComputePlanesFromPointCloud(imDepth);
+    ComputePlanesFromOrganizedPointCloud(imDepth);
     mnPlaneNum = mvPlanePoints.size();
     mvpMapPlanes = vector<MapPlane*>(mnPlaneNum,static_cast<MapPlane*>(nullptr));
     mvpParallelPlanes = vector<MapPlane*>(mnPlaneNum,static_cast<MapPlane*>(nullptr));
@@ -293,6 +294,10 @@ void Frame::UpdatePoseMatrices()
     mRwc = mRcw.t();
     mtcw = mTcw.rowRange(0,3).col(3);
     mOw = -mRcw.t()*mtcw;
+
+    mTwc = cv::Mat::eye(4,4,mTcw.type());
+    mRwc.copyTo(mTwc.rowRange(0,3).colRange(0,3));
+    mOw.copyTo(mTwc.rowRange(0,3).col(3));
 }
 
 bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
@@ -709,13 +714,15 @@ cv::Mat Frame::UnprojectStereo(const int &i)
 }
 
 void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
+//    clock_t time = clock();
     PointCloud::Ptr inputCloud( new PointCloud() );
+    float max = Config::Get<float>("Plane.MaxDistance");
     for ( int m=0; m<imDepth.rows; m+=3 )
     {
         for ( int n=0; n<imDepth.cols; n+=3 )
         {
             float d = imDepth.ptr<float>(m)[n];
-            if (d < 0.01 || d>10)
+            if (d < 0.01 || d > max)
                 continue;
             PointT p;
             p.z = d;
@@ -725,15 +732,29 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
             inputCloud->points.push_back(p);
         }
     }
+//    cout<< "Time of generating point cloud : " << 1000*(clock() - time)/(double)CLOCKS_PER_SEC << "ms" << endl;
 //    cout << "point cloud size: " << inputCloud->points.size() << endl;
     if(inputCloud->points.size() < 1000)
         return;
 
+    float disTh = Config::Get<float>("Plane.DistanceThreshold");
     pcl::SACSegmentation<PointT> seg;
     seg.setOptimizeCoefficients(true);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMaxIterations(1000);
-    seg.setDistanceThreshold(0.01);
+    seg.setDistanceThreshold(disTh);
+
+    pcl::VoxelGrid<PointT> sor;
+    sor.setInputCloud(inputCloud);
+    float leafSize = Config::Get<float>("Plane.LeafSize");
+    sor.setLeafSize(leafSize,leafSize,leafSize);
+    sor.filter(*inputCloud);
+
+    pcl::RadiusOutlierRemoval<PointT> outrem;
+    outrem.setInputCloud(inputCloud);
+    outrem.setRadiusSearch(0.5);
+    outrem.setMinNeighborsInRadius(20);
+    outrem.filter(*inputCloud);
 
     pcl::ExtractIndices<PointT> extract;
     int nr_points = (int) inputCloud->points.size();
@@ -745,6 +766,7 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
     int min_plane = Config::Get<int>("Plane.MinSize");
 
     while(inputCloud->points.size() > 0.3*nr_points){
+//        clock_t time1 = clock();
         seg.setInputCloud(inputCloud);
         seg.segment(*inliers,*coefficients);
         if(inliers->indices.size() < min_plane)
@@ -753,7 +775,7 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
         extract.setIndices(inliers);
         extract.setNegative(false);
         extract.filter(*planeCloud);
-
+//        cout<< "Time of plane segment : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
         mvPlanePoints.push_back(*planeCloud);
 
         cv::Mat coef = (cv::Mat_<float>(4,1) << coefficients->values[0],
@@ -761,13 +783,89 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
                                                 coefficients->values[2],
                                                 coefficients->values[3]);
         mvPlaneCoefficients.push_back(coef);
-
+//        cout<< "Time of copy plane data : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
         extract.setNegative(true);
         extract.filter(*planeCloud);
         inputCloud.swap(planeCloud);
+//        cout<< "Time of swap plane : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     }
 
 }
+
+    void Frame::ComputePlanesFromOrganizedPointCloud(const cv::Mat &imDepth) {
+//    clock_t time = clock();
+        PointCloud::Ptr inputCloud( new PointCloud() );
+        for ( int m=0; m<imDepth.rows; m+=3 )
+        {
+            for ( int n=0; n<imDepth.cols; n+=3 )
+            {
+                float d = imDepth.ptr<float>(m)[n];
+                PointT p;
+                p.z = d;
+                p.x = ( n - cx) * p.z / fx;
+                p.y = ( m - cy) * p.z / fy;
+
+                inputCloud->points.push_back(p);
+            }
+        }
+        inputCloud->height = ceil(imDepth.rows/3.0);
+        inputCloud->width = ceil(imDepth.cols/3.0);
+
+
+        //估计法线
+        pcl::IntegralImageNormalEstimation<PointT, pcl::Normal> ne;
+        pcl::PointCloud<pcl::Normal>::Ptr cloud_normals(new pcl::PointCloud<pcl::Normal>);
+        ne.setNormalEstimationMethod(ne.AVERAGE_3D_GRADIENT);
+        ne.setMaxDepthChangeFactor(0.05f);
+        ne.setNormalSmoothingSize(10.0f);
+        ne.setInputCloud(inputCloud);
+        //计算特征值
+        ne.compute(*cloud_normals);
+
+
+        int min_plane = Config::Get<int>("Plane.MinSize");
+        float AngTh = Config::Get<float>("Plane.AngleThreshold");
+        float DisTh = Config::Get<float>("Plane.DistanceThreshold");
+
+        vector<pcl::ModelCoefficients> coefficients;
+        vector<pcl::PointIndices> inliers;
+        pcl::PointCloud<pcl::Label>::Ptr labels ( new pcl::PointCloud<pcl::Label> );
+        vector<pcl::PointIndices> label_indices;
+        vector<pcl::PointIndices> boundary;
+
+        pcl::OrganizedMultiPlaneSegmentation< PointT, pcl::Normal, pcl::Label > mps;
+        mps.setMinInliers (min_plane);
+        mps.setAngularThreshold (0.017453 * AngTh);
+        mps.setDistanceThreshold (DisTh);
+        mps.setInputNormals (cloud_normals);
+        mps.setInputCloud (inputCloud);
+        std::vector<pcl::PlanarRegion<PointT>, Eigen::aligned_allocator<pcl::PlanarRegion<PointT>>> regions;
+        mps.segmentAndRefine (regions, coefficients, inliers, labels, label_indices, boundary);
+
+
+        pcl::ExtractIndices<PointT> extract;
+        extract.setInputCloud(inputCloud);
+        extract.setNegative(false);
+
+        for (int i = 0; i < inliers.size(); ++i) {
+            PointCloud::Ptr planeCloud(new PointCloud());
+            extract.setIndices(boost::make_shared<pcl::PointIndices>(inliers[i]));
+            extract.filter(*planeCloud);
+            mvPlanePoints.push_back(*planeCloud);
+
+            PointCloud::Ptr boundaryPoints(new PointCloud());
+            boundaryPoints->points = regions[i].getContour();
+            mvBoundaryPoints.push_back(*boundaryPoints);
+
+            cv::Mat coef = (cv::Mat_<float>(4,1) << coefficients[i].values[0],
+                                                    coefficients[i].values[1],
+                                                    coefficients[i].values[2],
+                                                    coefficients[i].values[3]);
+            mvPlaneCoefficients.push_back(coef);
+        }
+
+    }
+
     cv::Mat Frame::ComputePlaneWorldCoeff(const int &idx) {
         cv::Mat temp;
         cv::transpose(mTcw, temp);

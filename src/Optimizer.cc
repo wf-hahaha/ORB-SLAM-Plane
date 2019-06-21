@@ -248,6 +248,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
 
 int Optimizer::PoseOptimization(Frame *pFrame)
 {
+    clock_t time1 = clock();
     g2o::SparseOptimizer optimizer;
     g2o::BlockSolver_6_3::LinearSolverType * linearSolver;
 
@@ -517,7 +518,6 @@ int Optimizer::PoseOptimization(Frame *pFrame)
 
         vSE3->setEstimate(Converter::toSE3Quat(pFrame->mTcw));
         optimizer.initializeOptimization(0);
-        clock_t time1 = clock();
         optimizer.optimize(its[it]);
 //        cout<< "Time of  Optimation : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
 
@@ -618,7 +618,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     g2o::SE3Quat SE3quat_recov = vSE3_recov->estimate();
     cv::Mat pose = Converter::toCvMat(SE3quat_recov);
     pFrame->SetPose(pose);
-
+//    cout<< "Time of  Pose Optimation : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     return nInitialCorrespondences-nBad;
 }
 
@@ -626,7 +626,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
 {    
     // Local KeyFrames: First Breath Search from Current Keyframe
     list<KeyFrame*> lLocalKeyFrames;
-
+    clock_t time1 = clock();
     lLocalKeyFrames.push_back(pKF);
     pKF->mnBALocalForKF = pKF->mnId;
 
@@ -1153,6 +1153,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         g2o::VertexPlane* vPlane = static_cast<g2o::VertexPlane*>(optimizer.vertex(pMP->mnId+maxPointid+1));
         pMP->SetWorldPos(Converter::toCvMat(vPlane->estimate()));
     }
+//    cout<< "Time of Local BA : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
 }
 
 

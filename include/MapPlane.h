@@ -8,6 +8,7 @@
 #include"KeyFrame.h"
 #include"Frame.h"
 #include"Map.h"
+#include "Converter.h"
 
 #include <opencv2/core/core.hpp>
 #include <mutex>
@@ -20,6 +21,7 @@
 
 namespace ORB_SLAM2 {
     class KeyFrame;
+    class Frame;
     class MapPlane {
         typedef pcl::PointXYZRGB PointT;
         typedef pcl::PointCloud <PointT> PointCloud;
@@ -38,11 +40,14 @@ namespace ORB_SLAM2 {
         map<KeyFrame*, int> GetParObservations();
         map<KeyFrame*, int> GetVerObservations();
         int GetIndexInKeyFrame(KeyFrame *pKF);
+        void UpdateBoundary(const Frame& pF, int id);
+
     public:
         long unsigned int mnId; ///< Global ID for MapPlane;
         static long unsigned int nLastId;
         static std::mutex mGlobalMutex;
         long unsigned int mnBALocalForKF; //used in local BA
+        PointCloud::Ptr mvBoundaryPoints;
 
         //used for visualization
         int mRed;

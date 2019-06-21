@@ -176,6 +176,7 @@ void Tracking::SetViewer(Viewer *pViewer)
 
 cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRectRight, const double &timestamp)
 {
+//    clock_t time1 = clock();
     mImGray = imRectLeft;
     cv::Mat imGrayRight = imRectRight;
 
@@ -207,17 +208,22 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
     }
 
     mCurrentFrame = Frame(mImGray,imGrayRight,timestamp,mpORBextractorLeft,mpORBextractorRight,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
-
+//    cout<< "Time befor track : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     Track();
-
+//    cout<< "Time of track : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     return mCurrentFrame.mTcw.clone();
 }
 
 
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
 {
+//    clock_t time1 = clock();
     mImGray = imRGB;
     mImDepth = imD;
+//    cv::Mat temp;
+//    mImDepth.convertTo(temp, CV_32FC1);
+//    cv::bilateralFilter(temp,mImDepth,32,183,188);
+//    mImDepth.convertTo(mImDepth, CV_16UC1);
 
     if(mImGray.channels()==3)
     {
@@ -239,7 +245,9 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
 
     mCurrentFrame = Frame(mImGray,mImDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
+//    cout<< "Time befor track : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
     Track();
+//    cout<< "Time of track : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
 
     return mCurrentFrame.mTcw.clone();
 }
@@ -276,7 +284,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
 
 void Tracking::Track()
 {
-    cout << "New Frame : " << mCurrentFrame.mnId << endl;
+//    cout << "New Frame : " << mCurrentFrame.mnId << endl;
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;
@@ -321,7 +329,9 @@ void Tracking::Track()
                 }
                 else
                 {
+//                    clock_t time1 = clock();
                     bOK = TrackWithMotionModel();
+//                    cout<< "Time of track motion model : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
                     if(!bOK)
                         bOK = TrackReferenceKeyFrame();
                 }
@@ -408,8 +418,10 @@ void Tracking::Track()
         // If we have an initial estimation of the camera pose and matching. Track the local map.
         if(!mbOnlyTracking)
         {
+//            clock_t time1 = clock();
             if(bOK)
                 bOK = TrackLocalMap();
+//            cout<< "Time of track local map : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
         }
         else
         {
@@ -548,7 +560,7 @@ void Tracking::StereoInitialization()
             }
         }
 
-        cout << "New map created with " << mpMap->MapPointsInMap() << " points" << endl;
+//        cout << "New map created with " << mpMap->MapPointsInMap() << " points" << endl;
 
         for (int i = 0; i < mCurrentFrame.mnPlaneNum; ++i) {
             cv::Mat p3D = mCurrentFrame.ComputePlaneWorldCoeff(i);
@@ -776,7 +788,7 @@ void Tracking::CheckReplacedInLastFrame()
 
 bool Tracking::TrackReferenceKeyFrame()
 {
-    cout << "Track reference frame ... ";
+//    cout << "Track reference frame ... ";
     // Compute Bag of Words vector
     mCurrentFrame.ComputeBoW();
 
@@ -793,7 +805,8 @@ bool Tracking::TrackReferenceKeyFrame()
     mCurrentFrame.mvpMapPoints = vpMapPointMatches;
     mCurrentFrame.SetPose(mLastFrame.mTcw);
 
-    mpMap->AssociatePlanes(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
+    mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
+//    mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
 
     Optimizer::PoseOptimization(&mCurrentFrame);
 
@@ -818,7 +831,7 @@ bool Tracking::TrackReferenceKeyFrame()
         }
     }
 
-    cout << " done !" << endl;
+//    cout << " done !" << endl;
     return nmatchesMap>=10;
 }
 
@@ -890,7 +903,7 @@ void Tracking::UpdateLastFrame()
 
 bool Tracking::TrackWithMotionModel()
 {
-    cout << "Track Motion Frame ... " ;
+//    cout << "Track Motion Frame ... " ;
     ORBmatcher matcher(0.9,true);
 
     // Update last frame pose according to its reference keyframe
@@ -919,7 +932,8 @@ bool Tracking::TrackWithMotionModel()
     if(nmatches<20)
         return false;
 
-    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
+    mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
+//    mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
 
     // Optimize frame pose with all matches
     Optimizer::PoseOptimization(&mCurrentFrame);
@@ -950,7 +964,7 @@ bool Tracking::TrackWithMotionModel()
         mbVO = nmatchesMap<10;
         return nmatches>20;
     }
-    cout << " done !" << endl;
+//    cout << " done !" << endl;
     return nmatchesMap>=10;
 }
 
@@ -962,7 +976,8 @@ bool Tracking::TrackLocalMap()
 
     SearchLocalPoints();
 
-//    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon);
+   mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
+//   mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
     // Optimize Pose
     Optimizer::PoseOptimization(&mCurrentFrame);
     mnMatchesInliers = 0;
@@ -1127,7 +1142,8 @@ void Tracking::CreateNewKeyFrame()
     {
         mCurrentFrame.UpdatePoseMatrices();
 
-//        mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon);
+        mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh, true);
+//        mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh, true);
 
         for (int i = 0; i < mCurrentFrame.mnPlaneNum; ++i) {
             if(mCurrentFrame.mvpParallelPlanes[i]){
@@ -1137,12 +1153,13 @@ void Tracking::CreateNewKeyFrame()
                 mCurrentFrame.mvpVerticalPlanes[i]->AddVerObservation(pKF,i);
             }
 
-            if(mCurrentFrame.mvpMapPlanes[i] && !mCurrentFrame.mvbPlaneOutlier[i]) {
+            if(mCurrentFrame.mvpMapPlanes[i]) {
                 mCurrentFrame.mvpMapPlanes[i]->AddObservation(pKF, i);
                 continue;
             }
 
             cv::Mat p3D = mCurrentFrame.ComputePlaneWorldCoeff(i);
+//            cout << "create new plane :" << i << "  " << mCurrentFrame.mvPlaneCoefficients[i] << endl;
             MapPlane* pNewMP = new MapPlane(p3D, pKF, i);
             mpMap->AddMapPlane(pNewMP);
             pKF->AddMapPlane(pNewMP, i);
