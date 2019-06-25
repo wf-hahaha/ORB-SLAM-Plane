@@ -154,6 +154,8 @@ g2o::Plane3D Converter::toPlane3D(const cv::Mat &coe) {
          coe.at<float>(1,0),
          coe.at<float>(2,0),
          coe.at<float>(3,0);
+    if(coe.at<float>(3,0) < 0.0)
+        V = -V;
     return g2o::Plane3D(V);
 }
 

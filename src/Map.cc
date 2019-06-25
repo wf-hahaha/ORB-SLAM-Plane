@@ -404,13 +404,13 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                         cout << endl;
                 }
             }
-            if (p == -1) {
-                pF.mbNewPlane = true;
-                if(out)
-                    cout << "Find New Plane! " << endl;
-            }else{
-                mvpMapPlanes[p]->UpdateBoundary(pF, i);
-            }
+//            if (p == -1) {
+//                pF.mbNewPlane = true;
+//                if(out)
+//                    cout << "Find New Plane! " << endl;
+//            }else{
+//                mvpMapPlanes[p]->UpdateBoundary(pF, i);
+//            }
 
             if(out)
                 cout << endl;

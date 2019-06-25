@@ -443,6 +443,16 @@ void Tracking::Track()
         // If tracking were good, check if we insert a keyframe
         if(bOK)
         {
+            //Update Planes
+            for (int i = 0; i < mCurrentFrame.mnPlaneNum; ++i) {
+                MapPlane *pMP = mCurrentFrame.mvpMapPlanes[i];
+                if(pMP){
+                    pMP->UpdateBoundary(mCurrentFrame,i);
+                }else{
+                    mCurrentFrame.mbNewPlane = true;
+                }
+            }
+
             // Update motion model
             if(!mLastFrame.mTcw.empty())
             {
@@ -788,7 +798,7 @@ void Tracking::CheckReplacedInLastFrame()
 
 bool Tracking::TrackReferenceKeyFrame()
 {
-//    cout << "Track reference frame ... ";
+    cout << "Track reference frame ... " << endl;
     // Compute Bag of Words vector
     mCurrentFrame.ComputeBoW();
 
@@ -807,7 +817,7 @@ bool Tracking::TrackReferenceKeyFrame()
 
     mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
 //    mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
-
+//    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
     Optimizer::PoseOptimization(&mCurrentFrame);
 
     // Discard outliers
@@ -831,7 +841,25 @@ bool Tracking::TrackReferenceKeyFrame()
         }
     }
 
-//    cout << " done !" << endl;
+    int nDisgardPlane = 0;
+    for(int i =0; i<mCurrentFrame.mnPlaneNum; i++)
+    {
+        if(mCurrentFrame.mvpMapPlanes[i])
+        {
+            if(mCurrentFrame.mvbPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpMapPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbPlaneOutlier[i]=false;
+                nmatches--;
+                nDisgardPlane++;
+            }
+            else
+                nmatchesMap++;
+        }
+    }
+    if(nDisgardPlane>0)
+        cout << "disgard plane in tracking ref: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
+
     return nmatchesMap>=10;
 }
 
@@ -903,7 +931,7 @@ void Tracking::UpdateLastFrame()
 
 bool Tracking::TrackWithMotionModel()
 {
-//    cout << "Track Motion Frame ... " ;
+    cout << "Track Motion Frame ... " << endl;
     ORBmatcher matcher(0.9,true);
 
     // Update last frame pose according to its reference keyframe
@@ -934,7 +962,7 @@ bool Tracking::TrackWithMotionModel()
 
     mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
 //    mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
-
+//    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
     // Optimize frame pose with all matches
     Optimizer::PoseOptimization(&mCurrentFrame);
 
@@ -957,27 +985,46 @@ bool Tracking::TrackWithMotionModel()
             else if(mCurrentFrame.mvpMapPoints[i]->Observations()>0)
                 nmatchesMap++;
         }
-    }    
+    }
+    int nDisgardPlane = 0;
+    for(int i =0; i<mCurrentFrame.mnPlaneNum; i++)
+    {
+        if(mCurrentFrame.mvpMapPlanes[i])
+        {
+            if(mCurrentFrame.mvbPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpMapPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbPlaneOutlier[i]=false;
+                nmatches--;
+                nDisgardPlane++;
+            }
+            else
+                nmatchesMap++;
+        }
+    }
+    if(nDisgardPlane>0)
+        cout << "disgard plane in tracking motion: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
 
     if(mbOnlyTracking)
     {
         mbVO = nmatchesMap<10;
         return nmatches>20;
     }
-//    cout << " done !" << endl;
     return nmatchesMap>=10;
 }
 
 bool Tracking::TrackLocalMap()
 {
+    cout << "Tracking Local Map ..." << endl;
     // We have an estimation of the camera pose and some map points tracked in the frame.
     // We retrieve the local map and try to find matches to points in the local map.
     UpdateLocalMap();
 
     SearchLocalPoints();
 
-   mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
+//   mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
 //   mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
+//    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
     // Optimize Pose
     Optimizer::PoseOptimization(&mCurrentFrame);
     mnMatchesInliers = 0;
@@ -1003,6 +1050,27 @@ bool Tracking::TrackLocalMap()
 
         }
     }
+
+    int nDisgardPlane = 0;
+    for(int i =0; i<mCurrentFrame.mnPlaneNum; i++)
+    {
+        if(mCurrentFrame.mvpMapPlanes[i])
+        {
+            if(mCurrentFrame.mvbPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpMapPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbPlaneOutlier[i]=false;
+                nDisgardPlane++;
+            }
+            else
+                mnMatchesInliers++;
+        }
+    }
+    if(nDisgardPlane>0)
+        cout << "disgard plane in tracking localmap: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
+
+
+
     // Decide if the tracking was succesful
     // More restrictive if there was a relocalization recently
     if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<50)
@@ -1142,7 +1210,8 @@ void Tracking::CreateNewKeyFrame()
     {
         mCurrentFrame.UpdatePoseMatrices();
 
-        mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh, true);
+//        mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh, true);
+//        mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh, false);
 //        mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh, true);
 
         for (int i = 0; i < mCurrentFrame.mnPlaneNum; ++i) {

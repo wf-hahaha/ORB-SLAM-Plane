@@ -110,6 +110,8 @@ namespace g2o {
             static inline void normalize(Vector4D& coeffs) {
                 double n=coeffs.head<3>().norm();
                 coeffs = coeffs * (1./n);
+                if(coeffs(3)<0.0)
+                    coeffs = -coeffs;
             }
 
             Vector4D _coeffs;
@@ -121,6 +123,8 @@ namespace g2o {
         Matrix3D R=t.rotation();
         v2.head<3>() = R*v.head<3>();
         v2(3)=v(3) - t.translation().dot(v2.head<3>());
+        if(v2(3) < 0.0)
+            v2 = -v2;
         return Plane3D(v2);
     };
 }
