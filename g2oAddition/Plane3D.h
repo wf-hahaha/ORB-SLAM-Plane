@@ -100,7 +100,10 @@ namespace g2o {
 
             inline Vector2D ominus_par(const Plane3D& plane){
                 //construct the rotation that would bring the plane normal in (1 0 0)
-                Matrix3D R=rotation(normal()).transpose();
+                Vector3D nor = normal();
+                if(plane.normal().dot(nor) < 0)
+                    nor = -nor;
+                Matrix3D R=rotation(nor).transpose();
                 Vector3D n=R*plane.normal();
 
                 return Vector2D(azimuth(n), elevation(n));

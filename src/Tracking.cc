@@ -856,6 +856,25 @@ bool Tracking::TrackReferenceKeyFrame()
             else
                 nmatchesMap++;
         }
+
+        if(mCurrentFrame.mvpParallelPlanes[i])
+        {
+            if(mCurrentFrame.mvbParPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpParallelPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbParPlaneOutlier[i]=false;
+            }
+        }
+
+        if(mCurrentFrame.mvpVerticalPlanes[i])
+        {
+            if(mCurrentFrame.mvbVerPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpVerticalPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbVerPlaneOutlier[i]=false;
+            }
+        }
+
     }
     if(nDisgardPlane>0)
         cout << "disgard plane in tracking ref: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
@@ -1001,6 +1020,24 @@ bool Tracking::TrackWithMotionModel()
             else
                 nmatchesMap++;
         }
+
+        if(mCurrentFrame.mvpParallelPlanes[i])
+        {
+            if(mCurrentFrame.mvbParPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpParallelPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbParPlaneOutlier[i]=false;
+            }
+        }
+
+        if(mCurrentFrame.mvpVerticalPlanes[i])
+        {
+            if(mCurrentFrame.mvbVerPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpVerticalPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbVerPlaneOutlier[i]=false;
+            }
+        }
     }
     if(nDisgardPlane>0)
         cout << "disgard plane in tracking motion: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
@@ -1064,6 +1101,24 @@ bool Tracking::TrackLocalMap()
             }
             else
                 mnMatchesInliers++;
+        }
+
+        if(mCurrentFrame.mvpParallelPlanes[i])
+        {
+            if(mCurrentFrame.mvbParPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpParallelPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbParPlaneOutlier[i]=false;
+            }
+        }
+
+        if(mCurrentFrame.mvpVerticalPlanes[i])
+        {
+            if(mCurrentFrame.mvbVerPlaneOutlier[i])
+            {
+                mCurrentFrame.mvpVerticalPlanes[i]=static_cast<MapPlane*>(NULL);
+                mCurrentFrame.mvbVerPlaneOutlier[i]=false;
+            }
         }
     }
     if(nDisgardPlane>0)

@@ -219,6 +219,8 @@ public:
     std::vector<MapPlane*> mvpVerticalPlanes;
     // Flag to identify outlier planes new planes.
     std::vector<bool> mvbPlaneOutlier;
+    std::vector<bool> mvbParPlaneOutlier;
+    std::vector<bool> mvbVerPlaneOutlier;
     int mnPlaneNum;
     bool mbNewPlane; // used to determine a keyframe
 private:

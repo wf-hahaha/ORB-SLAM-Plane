@@ -181,6 +181,9 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mvpParallelPlanes = vector<MapPlane*>(mnPlaneNum,static_cast<MapPlane*>(nullptr));
     mvpVerticalPlanes = vector<MapPlane*>(mnPlaneNum,static_cast<MapPlane*>(nullptr));
     mvbPlaneOutlier = vector<bool>(mnPlaneNum,false);
+    mvbVerPlaneOutlier = vector<bool>(mnPlaneNum,false);
+    mvbParPlaneOutlier = vector<bool>(mnPlaneNum,false);
+
 //    pcl::visualization::CloudViewer viewer("viewer");
 //
 //    for(int x = 0; x < mvPlanePoints.size(); ++x) {
