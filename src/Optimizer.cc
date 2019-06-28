@@ -694,7 +694,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
         else
             cout << " Plane: " << PE/PN << " "; //<< " Max: " << PMax << endl;
 
-            PN = 0;
+        PN = 0;
         PE = 0;
         PMax = 0;
         for(size_t i=0, iend=vpEdgesParPlane.size(); i<iend; i++)
@@ -791,7 +791,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
 {    
     // Local KeyFrames: First Breath Search from Current Keyframe
     list<KeyFrame*> lLocalKeyFrames;
-    clock_t time1 = clock();
+//    clock_t time1 = clock();
     lLocalKeyFrames.push_back(pKF);
     pKF->mnBALocalForKF = pKF->mnId;
 
