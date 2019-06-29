@@ -20,10 +20,12 @@
 
 #include "MapDrawer.h"
 #include "MapPoint.h"
+#include "MapPlane.h"
 #include "KeyFrame.h"
 #include <pangolin/pangolin.h>
 #include <mutex>
-
+#include <pcl/common/transforms.h>
+#include <pcl/point_types.h>
 namespace ORB_SLAM2
 {
 
@@ -77,6 +79,39 @@ void MapDrawer::DrawMapPoints()
 
     }
 
+    glEnd();
+}
+
+void MapDrawer::DrawMapPlanes() {
+    const vector<MapPlane*> &vpMPs = mpMap->GetAllMapPlanes();
+    if(vpMPs.empty())
+        return;
+    glPointSize(mPointSize/2);
+    glBegin(GL_POINTS);
+
+    for(auto pMP : vpMPs){
+        map<KeyFrame*, int> observations = pMP->GetObservations();
+        float ir = pMP->mRed;
+        float ig = pMP->mGreen;
+        float ib = pMP->mBlue;
+        float norm = sqrt(ir*ir + ig*ig + ib*ib);
+        glColor3f(ir/norm, ig/norm, ib/norm);
+        for(auto mit = observations.begin(), mend = observations.end(); mit != mend; mit++){
+            KeyFrame* frame = mit->first;
+            int id = mit->second;
+            cv::Mat Twc = frame->GetPoseInverse();
+            cv::Mat pos(4,1,CV_32F);
+            for(auto& p : frame->mvPlanePoints[id].points){
+                pos.at<float>(0) = p.x;
+                pos.at<float>(1) = p.y;
+                pos.at<float>(2) = p.z;
+                pos.at<float>(3) = 1;
+
+                pos = Twc*pos;
+                glVertex3f(pos.at<float>(0),pos.at<float>(1),pos.at<float>(2));
+            }
+        }
+    }
     glEnd();
 }
 
