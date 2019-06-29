@@ -118,6 +118,11 @@ public:
     //Plane functions
     void ComputePlanesFromPointCloud(const cv::Mat &imDepth);
     void ComputePlanesFromOrganizedPointCloud(const cv::Mat &imDepth);
+    void GeneratePlanesFromBoundries();
+    void CaculatePlanes(const cv::Mat& inputplane,
+                        const cv::Mat& inputline);
+    bool PlaneNotSeen(const cv::Mat& coef);
+
     cv::Mat ComputePlaneWorldCoeff(const int &idx);
 
 public:
@@ -212,8 +217,10 @@ public:
 
     //For PointCloud
     std::vector<PointCloud> mvPlanePoints;
+    std::vector<PointCloud> mvNotSeenPlanePoints;
     std::vector<PointCloud> mvBoundaryPoints;
     std::vector<cv::Mat> mvPlaneCoefficients;
+    std::vector<cv::Mat> mvNotSeenPlaneCoefficients;
     std::vector<MapPlane*> mvpMapPlanes;
     std::vector<MapPlane*> mvpParallelPlanes;
     std::vector<MapPlane*> mvpVerticalPlanes;

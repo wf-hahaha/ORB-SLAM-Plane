@@ -109,6 +109,8 @@ Plane.VPChi: 50
 Plane.ParallelInfo: 0.5
 Plane.VerticalInfo: 0.5
 
+Line.Ratio: 0.3
+
 #SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg2_desk_with_person/planeORB.txt"
 SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg2_pioneer_slam/planeORB_pv_test.txt"
 #SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg2_pioneer_slam3/planeORB.txt"

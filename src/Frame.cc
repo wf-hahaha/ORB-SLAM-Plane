@@ -60,6 +60,7 @@ Frame::Frame(const Frame &frame)
         SetPose(frame.mTcw);
 }
 
+
 //stereo
 Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),
@@ -184,12 +185,21 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mvbVerPlaneOutlier = vector<bool>(mnPlaneNum,false);
     mvbParPlaneOutlier = vector<bool>(mnPlaneNum,false);
 
-//    pcl::visualization::CloudViewer viewer("viewer");
-//
-//    for(int x = 0; x < mvPlanePoints.size(); ++x) {
-//        viewer.showCloud(mvPlanePoints[x].makeShared());
-//        getchar();
-//    }
+    GeneratePlanesFromBoundries();
+
+    pcl::visualization::CloudViewer viewer("plane viewer");
+
+    PointCloud::Ptr showingCloud(new PointCloud);
+
+    for(int x = 0; x < mvPlanePoints.size(); ++x) {
+        *showingCloud += mvPlanePoints[x];
+    }
+
+    for(int i = 0;i < mvNotSeenPlanePoints.size(); ++i){
+        *showingCloud += mvNotSeenPlanePoints[i];
+    }
+    viewer.showCloud(showingCloud);
+    getchar();
 
 //    cout << "plane " << mnId << " : " << endl;
 //    cout << "  find plane: " << mvPlanePoints.size() << endl;
@@ -807,6 +817,9 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
                 p.z = d;
                 p.x = ( n - cx) * p.z / fx;
                 p.y = ( m - cy) * p.z / fy;
+                p.r = 0;
+                p.g = 0;
+                p.b = 255;
 
                 inputCloud->points.push_back(p);
             }
@@ -868,6 +881,97 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
         }
 
     }
+
+    void Frame::GeneratePlanesFromBoundries() {
+        pcl::SACSegmentation<PointT> segLine;
+        pcl::ExtractIndices<PointT> extract;
+        double lineRatio = Config::Get<double>("Line.Ratio");
+        segLine.setOptimizeCoefficients(true);
+        segLine.setModelType(pcl::SACMODEL_LINE);
+        segLine.setMaxIterations(1000);
+        segLine.setDistanceThreshold(0.01);
+        PointCloud::Ptr boundPoints(new pcl::PointCloud<PointT>);
+        PointCloud::Ptr tempPoints(new pcl::PointCloud<PointT>);
+        pcl::PointIndices::Ptr lineins (new pcl::PointIndices ());
+        pcl::ModelCoefficients::Ptr coeffline (new pcl::ModelCoefficients ());
+        for(int i=0; i < mvBoundaryPoints.size(); ++i){
+            boundPoints->points = mvBoundaryPoints[i].points;
+            int boundSize = boundPoints->points.size();
+            for(int j=0; j < 4; j++) {
+                segLine.setInputCloud(boundPoints);
+                segLine.segment(*lineins, *coeffline);
+                if (lineins->indices.size() < lineRatio * boundSize){
+                    break;
+                }
+                cv::Mat coef = (cv::Mat_<float>(6,1) << coeffline->values[0],
+                                                        coeffline->values[1],
+                                                        coeffline->values[2],
+                                                        coeffline->values[3],
+                                                        coeffline->values[4],
+                                                        coeffline->values[5]);
+                CaculatePlanes(mvPlaneCoefficients[i], coef);
+
+                extract.setInputCloud(boundPoints);
+                extract.setIndices(lineins);
+                extract.setNegative(true);
+                extract.filter(*tempPoints);
+                boundPoints.swap(tempPoints);
+            }
+        }
+
+}
+    void Frame::CaculatePlanes(const cv::Mat &inputplane, const cv::Mat &inputline) {
+        //(l,m,n) × (o,p,q) = (mq-np,no-lq,lp-mo)
+        float a,b,c,d;
+        a = inputplane.at<float>(1)*inputline.at<float>(5) - inputplane.at<float>(2)*inputline.at<float>(4);
+        b = inputplane.at<float>(2)*inputline.at<float>(3) - inputplane.at<float>(0)*inputline.at<float>(5);
+        c = inputplane.at<float>(0)*inputline.at<float>(4) - inputplane.at<float>(1)*inputline.at<float>(3);
+        d = a*inputline.at<float>(0) + b*inputline.at<float>(1) + c*inputline.at<float>(2);
+        float v = sqrt(a*a + b*b + c*c);
+
+        cv::Mat coef = (cv::Mat_<float>(4,1) << a/v, b/v, c/v, -d/v);
+
+        if(PlaneNotSeen(coef)){
+            mvNotSeenPlaneCoefficients.push_back(coef);
+            PointCloud cloud;
+            PointT p;
+            for(float i = inputline.at<float>(0)-0.5; i < inputline.at<float>(0)+0.5;){
+                p.x = i;
+                for(float j = inputline.at<float>(1)-0.5; j < inputline.at<float>(1)+0.5;){
+                    p.y = j;
+                    p.z = (coef.at<float>(0)*p.x + coef.at<float>(1)*p.y + coef.at<float>(3)) / (-coef.at<float>(2));
+                    p.r = 255;
+                    p.g = 0;
+                    p.b = 0;
+                    cloud.points.push_back(p);
+                    j+=0.02;
+                }
+                i+=0.02;
+            }
+            cloud.height = 1;
+            cloud.width = cloud.points.size();
+            mvNotSeenPlanePoints.push_back(cloud);
+        }
+}
+
+    bool Frame::PlaneNotSeen(const cv::Mat &coef) {
+        for (int j = 0; j < mvPlaneCoefficients.size(); ++j) {
+            cv::Mat pM = mvPlaneCoefficients[j];
+            float d = pM.at<float>(3,0) - coef.at<float>(3,0);
+            if(d > 0.1 || d < -0.1)
+                continue;
+            float angle = pM.at<float>(0,0) * coef.at<float>(0,0) +
+                          pM.at<float>(1,0) * coef.at<float>(1,0) +
+                          pM.at<float>(2,0) * coef.at<float>(2,0);
+            if(angle < 0.985 && angle > -0.985)
+                continue;
+
+            return false;
+        }
+        return true;
+}
+
+
 
     cv::Mat Frame::ComputePlaneWorldCoeff(const int &idx) {
         cv::Mat temp;
