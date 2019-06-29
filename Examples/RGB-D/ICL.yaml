@@ -88,12 +88,12 @@ Plane.AssociationAngMon: 0.8 # 30 degree
 
 
 #Plane.VerticalThreshold: 0.0523 # 87 degree
-#Plane.VerticalThreshold: 0.08716 # 85 degree
+Plane.VerticalThreshold: 0.08716 # 85 degree
 #Plane.VerticalThreshold: 0.17365 # 80 degree
-Plane.VerticalThreshold: 0.0 # no vertical constraint
+#Plane.VerticalThreshold: 0.0 # no vertical constraint
 #Plane.ParallelThreshold: 0.98481 # 10 degree
-#Plane.ParallelThreshold: 0.9962 # 5 degree
-Plane.ParallelThreshold: 1.9962 # no parallel constraint
+Plane.ParallelThreshold: 0.9962 # 5 degree
+#Plane.ParallelThreshold: 1.9962 # no parallel constraint
 
 
 #Plane.AngleInfo: 57.3 # 1 degree
@@ -102,13 +102,14 @@ Plane.AngleInfo: 0.5
 Plane.DistanceInfo: 50
 
 Plane.Chi: 100
+Plane.VPChi: 50
 
-Plane.ParallelInfo: 0.5
-Plane.VerticalInfo: 0.5
+Plane.ParallelInfo: 0.1
+Plane.VerticalInfo: 0.1
 
 
 
 #SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/traj0n_frei_png/planeORB_624.txt"
-SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/living_room_traj3n_frei_png/planeORB_pv_test.txt"
+SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/living_room_traj0n_frei_png/planeORB_pv_test.txt"
 SavePath.Keyframe: "KeyFrameTrajectory.txt"
 
