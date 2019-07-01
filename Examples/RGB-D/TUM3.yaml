@@ -108,13 +108,13 @@ Plane.VPChi: 50
 Plane.ParallelInfo: 0.5
 Plane.VerticalInfo: 0.5
 
-Line.Ratio: 0.2
+Line.Ratio: 0.1
 
 #SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_notexture_far/planeORB_bug.txt"
 #SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_notexture_near/planeORB.txt"
-#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_texture_far/planeORB_pv_test.txt"
+SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_texture_far/planeORB_notseen_test.txt"
 #SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_structure_texture_near/planeORB_pv_test.txt"
-#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_cabinet/planeORB_pv_test.txt"
+#SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_cabinet/planeORB_notseen_test.txt"
 #SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_large_cabinet/planeORB_pv_test.txt"
 #SavePath.Frame: "/home/fishmarch/myData/TUM/rgbd_dataset_freiburg3_long_office_household/planeORB.txt"
 SavePath.Keyframe: "KeyFrameTrajectory.txt"

@@ -119,10 +119,10 @@ public:
     void ComputePlanesFromPointCloud(const cv::Mat &imDepth);
     void ComputePlanesFromOrganizedPointCloud(const cv::Mat &imDepth);
     void GeneratePlanesFromBoundries();
-    void CaculatePlanes(const cv::Mat& inputplane,
+    bool CaculatePlanes(const cv::Mat& inputplane,
                         const cv::Mat& inputline);
     bool PlaneNotSeen(const cv::Mat& coef);
-
+    bool LineInRange(const cv::Mat& Pc);
     cv::Mat ComputePlaneWorldCoeff(const int &idx);
 
 public:

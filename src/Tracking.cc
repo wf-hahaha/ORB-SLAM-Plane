@@ -879,7 +879,7 @@ bool Tracking::TrackReferenceKeyFrame()
     if(nDisgardPlane>0)
         cout << "disgard plane in tracking ref: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
 
-    return nmatchesMap>=6; //10
+    return nmatchesMap>=5; //10
 }
 
 void Tracking::UpdateLastFrame()
@@ -1047,7 +1047,7 @@ bool Tracking::TrackWithMotionModel()
         mbVO = nmatchesMap<10;
         return nmatches>20;
     }
-    return nmatchesMap>=6; //10
+    return nmatchesMap>=5; //10
 }
 
 bool Tracking::TrackLocalMap()
@@ -1129,7 +1129,7 @@ bool Tracking::TrackLocalMap()
     if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<50)
         return false;
 
-    if(mnMatchesInliers<20) //30
+    if(mnMatchesInliers<15) //30
         return false;
     else
         return true;
