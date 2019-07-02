@@ -203,13 +203,21 @@ public:
     std::vector<PointCloud> mvPlanePoints;
     std::vector<PointCloud> mvBoundaryPoints;
     std::vector<cv::Mat> mvPlaneCoefficients;
+
+//    std::vector<PointCloud> mvNotSeenPlanePoints;
+    std::vector<PointCloud> mvNotSeenBoundaryPoints;
+    std::vector<cv::Mat> mvNotSeenPlaneCoefficients;
+
     int mnPlaneNum;
+    int mnNotSeenPlaneNum;
     std::vector<MapPlane*> mvpMapPlanes;
+    std::vector<MapPlane*> mvpNotSeenMapPlanes;
     std::vector<MapPlane*> mvpParallelPlanes;
     std::vector<MapPlane*> mvpVerticalPlanes;
     bool mbNewPlane; // used to determine a keyframe
 
     void AddMapPlane(MapPlane* pMP, const int &idx);
+    void AddNotSeenMapPlane(MapPlane* pMP, const int &idx);
     void EraseMapPlaneMatch(const int &idx);
     void EraseMapPlaneMatch(MapPlane* pMP);
     // The following variables need to be accessed trough a mutex to be thread safe.

@@ -366,17 +366,17 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 vpEdgesStereo.push_back(e);
                 vnIndexEdgeStereo.push_back(i);
 
-
-                e->computeError();
-                double chi = e->chi2();
-                BAEror += chi;
-                BAMax = BAMax > chi ? BAMax : chi;
-                BANum ++;
+//
+//                e->computeError();
+//                double chi = e->chi2();
+//                BAEror += chi;
+//                BAMax = BAMax > chi ? BAMax : chi;
+//                BANum ++;
             }
         }
 
     }
-        cout << "Befor BA error:   BA: " << BAEror/BANum << " Max: " << BAMax << "   ";
+//        cout << "Befor BA error:   BA: " << BAEror/BANum << " Max: " << BAMax << "   ";
     }
 
 
@@ -401,6 +401,11 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     vpEdgesVerPlane.reserve(M);
     vnIndexEdgeVerPlane.reserve(M);
 
+    vector<g2o::EdgePlane*> vpEdgesNotSeenPlane;
+    vector<size_t> vnIndexEdgeNotSeenPlane;
+    vpEdgesNotSeenPlane.reserve(pFrame->mnNotSeenPlaneNum);
+    vnIndexEdgeNotSeenPlane.reserve(pFrame->mnNotSeenPlaneNum);
+
     std::set<int> vnVertexId;
 
     double angleInfo = Config::Get<double>("Plane.AngleInfo");
@@ -416,7 +421,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
 
     double VPplaneChi = Config::Get<double>("Plane.VPChi");
     const float VPdeltaPlane = sqrt(VPplaneChi);
-//    cout << "-----------------------start---------------------------" << endl;
+
     {
         unique_lock<mutex> lock(MapPlane::mGlobalMutex);
         int PNum = 0;
@@ -427,7 +432,6 @@ int Optimizer::PoseOptimization(Frame *pFrame)
             if(pMP){
 //                cout << "add plane vertex: " << pMP->mnId;
                 pFrame->mvbPlaneOutlier[i] = false;
-
                 if(vnVertexId.count(pMP->mnId) == 0) {
                     g2o::VertexPlane* vP = new g2o::VertexPlane();
                     vP->setEstimate(Converter::toPlane3D(pMP->GetWorldPos()));
@@ -439,16 +443,24 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                     optimizer.addVertex(vP);
                     vnVertexId.insert(pMP->mnId);
                 }
-
+                nInitialCorrespondences++;
                 g2o::EdgePlane* e = new g2o::EdgePlane();
                 e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(0)));
                 e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pMP->mnId + 1)));
                 e->setMeasurement(Converter::toPlane3D(pFrame->mvPlaneCoefficients[i]));
                 //TODO
                 Eigen::Matrix3d Info;
-                Info << angleInfo, 0, 0,
-                        0, angleInfo, 0,
-                        0, 0, disInfo;
+                if(pMP->mbSeen) {
+                    Info << angleInfo, 0, 0,
+                            0, angleInfo, 0,
+                            0, 0, disInfo;
+                }
+                else{
+                    Info << angleInfo/2, 0, 0,
+                            0, angleInfo/2, 0,
+                            0, 0, disInfo/2;
+                }
+
                 e->setInformation(Info);
 
                 g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
@@ -461,16 +473,15 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 vpEdgesPlane.push_back(e);
                 vnIndexEdgePlane.push_back(i);
 
-
-                e->computeError();
-                double chi = e->chi2();
-                PEror += chi;
-                PMax = PMax > chi ? PMax : chi;
-                PNum ++;
+//                e->computeError();
+//                double chi = e->chi2();
+//                PEror += chi;
+//                PMax = PMax > chi ? PMax : chi;
+//                PNum ++;
 //                cout << "  done!" << endl;
             }
         }
-        cout << " Plane: " << PEror/PNum << " ";//" Max: " << PMax << " ";
+//        cout << " Plane: " << PEror/PNum << " ";//" Max: " << PMax << " ";
 
         PNum = 0;
         PEror = 0;
@@ -495,7 +506,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                     optimizer.addVertex(vP);
                     vnVertexId.insert(pMP->mnId);
                 }
-
+                nInitialCorrespondences++;
                 g2o::EdgeParallelPlane *e = new g2o::EdgeParallelPlane();
                 e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(0)));
                 e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(id)));
@@ -516,19 +527,20 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 vpEdgesParPlane.push_back(e);
                 vnIndexEdgeParPlane.push_back(i);
 
-                e->computeError();
-                double chi = e->chi2();
-                PEror += chi;
-                PMax = PMax > chi ? PMax : chi;
-                PNum ++;
+//                e->computeError();
+//                double chi = e->chi2();
+//                PEror += chi;
+//                PMax = PMax > chi ? PMax : chi;
+//                PNum ++;
             }
         }
-        cout << " Par Plane: " << PEror/PNum << " ";//" Max: " << PMax << " ";
+//        cout << " Par Plane: " << PEror/PNum << " ";//" Max: " << PMax << " ";
         PNum = 0;
         PEror = 0;
         PMax = 0;
         vnVertexId.clear();
 
+        unsigned long maxVerticalPlaneId = maxParallelPlaneId;
         for (int i = 0; i < M; ++i) {
             // add vertical planes!
             MapPlane* pMP = pFrame->mvpVerticalPlanes[i];
@@ -540,12 +552,14 @@ int Optimizer::PoseOptimization(Frame *pFrame)
 //                cout << "add vertical plane " << pMP->mnId << endl;
                     g2o::VertexPlane *vP = new g2o::VertexPlane();
                     vP->setEstimate(Converter::toPlane3D(pMP->GetWorldPos()));
+                    if(id > maxVerticalPlaneId)
+                        maxVerticalPlaneId = id;
                     vP->setId(id);
                     vP->setFixed(true);
                     optimizer.addVertex(vP);
                     vnVertexId.insert(pMP->mnId);
                 }
-
+                nInitialCorrespondences++;
                 g2o::EdgeVerticalPlane* e = new g2o::EdgeVerticalPlane();
                 e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(0)));
                 e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
@@ -566,14 +580,60 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 vpEdgesVerPlane.push_back(e);
                 vnIndexEdgeVerPlane.push_back(i);
 
-                e->computeError();
-                double chi = e->chi2();
-                PEror += chi;
-                PMax = PMax > chi ? PMax : chi;
-                PNum ++;
+//                e->computeError();
+//                double chi = e->chi2();
+//                PEror += chi;
+//                PMax = PMax > chi ? PMax : chi;
+//                PNum ++;
             }
         }
-        cout << " Ver Plane: " << PEror/PNum << endl;//" Max: " << PMax << endl;
+//        cout << " Ver Plane: " << PEror/PNum << endl;//" Max: " << PMax << endl;
+        vnVertexId.clear();
+        for (int i = 0; i < pFrame->mnNotSeenPlaneNum; ++i) {
+            MapPlane* pMP = pFrame->mvpNotSeenMapPlanes[i];
+            if(pMP){
+                pFrame->mvbNotSeenPlaneOutlier[i] = false;
+                int id = pMP->mnId + maxVerticalPlaneId + 1;
+                if(vnVertexId.count(pMP->mnId) == 0) {
+                    g2o::VertexPlane* vP = new g2o::VertexPlane();
+                    vP->setEstimate(Converter::toPlane3D(pMP->GetWorldPos()));
+                    vP->setId(id);
+                    vP->setFixed(true);
+                    optimizer.addVertex(vP);
+                    vnVertexId.insert(pMP->mnId);
+                }
+                nInitialCorrespondences++;
+                g2o::EdgePlane* e = new g2o::EdgePlane();
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(0)));
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
+                e->setMeasurement(Converter::toPlane3D(pFrame->mvNotSeenPlaneCoefficients[i]));
+                //TODO
+                Eigen::Matrix3d Info;
+                if(pMP->mbSeen) {
+                    Info << angleInfo/2, 0, 0,
+                            0, angleInfo/2, 0,
+                            0, 0, disInfo/2;
+                }
+                else{
+                    Info << angleInfo/4, 0, 0,
+                            0, angleInfo/4, 0,
+                            0, 0, disInfo/4;
+                }
+
+                e->setInformation(Info);
+
+                g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+                e->setRobustKernel(rk);
+                //TODO
+                rk->setDelta(deltaPlane/2);
+
+                optimizer.addEdge(e);
+
+                vpEdgesNotSeenPlane.push_back(e);
+                vnIndexEdgeNotSeenPlane.push_back(i);
+            }
+        }
+
     }
 //    cout << pFrame->mnId  <<"  :add plane in optimation: " << vnVertexId.size() << endl;
 //    cout << "------------------------end--------------------------" << endl;
@@ -620,7 +680,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
             if(it==2)
                 e->setRobustKernel(0);
         }
-        cout << "after BA optimation : ";
+//        cout << "after BA optimation : ";
         int BAN = 0;
         double BAE = 0, BAMax = 0;
 
@@ -654,7 +714,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
             if(it==2)
                 e->setRobustKernel(0);
         }
-        cout << " BA: " << BAE/BAN << "  " ;//" Max: " << BAMax << "  ";
+//        cout << " BA: " << BAE/BAN << "  " ;//" Max: " << BAMax << "  ";
 
         int PN = 0;
         double PE = 0, PMax = 0;
@@ -680,7 +740,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 pFrame->mvbPlaneOutlier[idx]=true;
                 e->setLevel(1);
                 nBad++;
-                cout << "bad: " << chi2 << "  Pc : " << pFrame->ComputePlaneWorldCoeff(idx).t() << "  Pw :" << pFrame->mvpMapPlanes[idx]->GetWorldPos().t() << endl;
+//                cout << "bad: " << chi2 << "  Pc : " << pFrame->ComputePlaneWorldCoeff(idx).t() << "  Pw :" << pFrame->mvpMapPlanes[idx]->GetWorldPos().t() << endl;
             }
             else
             {
@@ -691,10 +751,42 @@ int Optimizer::PoseOptimization(Frame *pFrame)
             if(it==2)
                 e->setRobustKernel(0);
         }
-        if(PN==0)
-            cout << "No plane " << " ";
-        else
-            cout << " Plane: " << PE/PN << " "; //<< " Max: " << PMax << endl;
+//        if(PN==0)
+//            cout << "No plane " << " ";
+//        else
+//            cout << " Plane: " << PE/PN << " "; //<< " Max: " << PMax << endl;
+
+        for(size_t i=0, iend=vpEdgesNotSeenPlane.size(); i<iend; i++)
+        {
+            g2o::EdgePlane* e = vpEdgesNotSeenPlane[i];
+
+            const size_t idx = vnIndexEdgeNotSeenPlane[i];
+
+            if(pFrame->mvbNotSeenPlaneOutlier[idx])
+            {
+                e->computeError();
+            }
+
+            const float chi2 = e->chi2();
+            PN ++ ;
+            PE += chi2;
+            PMax = PMax > chi2 ? PMax : chi2;
+            if(chi2>planeChi/2)
+            {
+                pFrame->mvbNotSeenPlaneOutlier[idx]=true;
+                e->setLevel(1);
+                nBad++;
+//                cout << "bad: " << chi2 << "  Pc : " << pFrame->ComputePlaneWorldCoeff(idx).t() << "  Pw :" << pFrame->mvpMapPlanes[idx]->GetWorldPos().t() << endl;
+            }
+            else
+            {
+                e->setLevel(0);
+                pFrame->mvbNotSeenPlaneOutlier[idx]=false;
+            }
+
+            if(it==2)
+                e->setRobustKernel(0);
+        }
 
         PN = 0;
         PE = 0;
@@ -720,7 +812,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 pFrame->mvbParPlaneOutlier[idx]=true;
                 e->setLevel(1);
                 nBad++;
-                cout << "bad Par: " << chi2 << "  Pc : " << pFrame->ComputePlaneWorldCoeff(idx).t() << "  Pw :" << pFrame->mvpParallelPlanes[idx]->GetWorldPos().t() << endl;
+//                cout << "bad Par: " << chi2 << "  Pc : " << pFrame->ComputePlaneWorldCoeff(idx).t() << "  Pw :" << pFrame->mvpParallelPlanes[idx]->GetWorldPos().t() << endl;
             }
             else
             {
@@ -731,10 +823,10 @@ int Optimizer::PoseOptimization(Frame *pFrame)
             if(it==2)
                 e->setRobustKernel(0);
         }
-        if(PN==0)
-            cout << "No par plane " << " ";
-        else
-            cout << "par Plane: " << PE/PN << " "; //<< " Max: " << PMax << endl;
+//        if(PN==0)
+//            cout << "No par plane " << " ";
+//        else
+//            cout << "par Plane: " << PE/PN << " "; //<< " Max: " << PMax << endl;
 
         PN = 0;
         PE = 0;
@@ -761,7 +853,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                 pFrame->mvbVerPlaneOutlier[idx]=true;
                 e->setLevel(1);
                 nBad++;
-                cout << "bad Ver: " << chi2 << "  Pc : " << pFrame->ComputePlaneWorldCoeff(idx).t() << "  Pw :" << pFrame->mvpVerticalPlanes[idx]->GetWorldPos().t() << endl;
+//                cout << "bad Ver: " << chi2 << "  Pc : " << pFrame->ComputePlaneWorldCoeff(idx).t() << "  Pw :" << pFrame->mvpVerticalPlanes[idx]->GetWorldPos().t() << endl;
             }
             else
             {
@@ -772,10 +864,10 @@ int Optimizer::PoseOptimization(Frame *pFrame)
             if(it==2)
                 e->setRobustKernel(0);
         }
-        if(PN==0)
-            cout << "No Ver plane " << endl;
-        else
-            cout << "Ver Plane: " << PE/PN << endl; //<< " Max: " << PMax << endl;
+//        if(PN==0)
+//            cout << "No Ver plane " << endl;
+//        else
+//            cout << "Ver Plane: " << PE/PN << endl; //<< " Max: " << PMax << endl;
 
         if(optimizer.edges().size()<10)
             break;

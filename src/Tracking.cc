@@ -329,9 +329,7 @@ void Tracking::Track()
                 }
                 else
                 {
-//                    clock_t time1 = clock();
                     bOK = TrackWithMotionModel();
-//                    cout<< "Time of track motion model : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
                     if(!bOK)
                         bOK = TrackReferenceKeyFrame();
                 }
@@ -367,7 +365,6 @@ void Tracking::Track()
                 else
                 {
                     // In last frame we tracked mainly "visual odometry" points.
-
                     // We compute two camera poses, one from motion model and one doing relocalization.
                     // If relocalization is sucessfull we choose that solution, otherwise we retain
                     // the "visual odometry" solution.
@@ -446,7 +443,7 @@ void Tracking::Track()
             //Update Planes
             for (int i = 0; i < mCurrentFrame.mnPlaneNum; ++i) {
                 MapPlane *pMP = mCurrentFrame.mvpMapPlanes[i];
-                if(pMP){
+                if(pMP && pMP->mbSeen){
                     pMP->UpdateBoundary(mCurrentFrame,i);
                 }else{
                     mCurrentFrame.mbNewPlane = true;
@@ -579,7 +576,14 @@ void Tracking::StereoInitialization()
             pKFini->AddMapPlane(pNewMP, i);
         }
 
-        cout << "New map created with " << mpMap->MapPlanesInMap() << " planes" << endl;
+        for (int i = 0; i < mCurrentFrame.mnNotSeenPlaneNum; ++i) {
+            cv::Mat p3D = mCurrentFrame.ComputeNotSeenPlaneWorldCoeff(i);
+            MapPlane* pNewMP = new MapPlane(p3D, pKFini, i, false);
+            mpMap->AddNotSeenMapPlane(pNewMP);
+            pKFini->AddNotSeenMapPlane(pNewMP, i);
+        }
+
+        cout << "New map created with " << mpMap->MapPlanesInMap() << " planes and " <<  mpMap->NotSeenMapPlanesInMap()  << " not seen planes " << endl;
 
         mpLocalMapper->InsertKeyFrame(pKFini);
 
@@ -876,6 +880,15 @@ bool Tracking::TrackReferenceKeyFrame()
         }
 
     }
+    for (int i = 0; i < mCurrentFrame.mnNotSeenPlaneNum; ++i) {
+        if (mCurrentFrame.mvpNotSeenMapPlanes[i]) {
+            if (mCurrentFrame.mvbNotSeenPlaneOutlier[i]) {
+                mCurrentFrame.mvpNotSeenMapPlanes[i] = static_cast<MapPlane *>(NULL);
+                mCurrentFrame.mvbNotSeenPlaneOutlier[i] = false;
+            }
+        }
+    }
+
     if(nDisgardPlane>0)
         cout << "disgard plane in tracking ref: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
 
@@ -1006,39 +1019,41 @@ bool Tracking::TrackWithMotionModel()
         }
     }
     int nDisgardPlane = 0;
-    for(int i =0; i<mCurrentFrame.mnPlaneNum; i++)
-    {
-        if(mCurrentFrame.mvpMapPlanes[i])
-        {
-            if(mCurrentFrame.mvbPlaneOutlier[i])
-            {
-                mCurrentFrame.mvpMapPlanes[i]=static_cast<MapPlane*>(NULL);
-                mCurrentFrame.mvbPlaneOutlier[i]=false;
+    for (int i = 0; i < mCurrentFrame.mnPlaneNum; i++) {
+        if (mCurrentFrame.mvpMapPlanes[i]) {
+            if (mCurrentFrame.mvbPlaneOutlier[i]) {
+                mCurrentFrame.mvpMapPlanes[i] = static_cast<MapPlane *>(NULL);
+                mCurrentFrame.mvbPlaneOutlier[i] = false;
                 nmatches--;
                 nDisgardPlane++;
-            }
-            else
+            } else
                 nmatchesMap++;
         }
 
-        if(mCurrentFrame.mvpParallelPlanes[i])
-        {
-            if(mCurrentFrame.mvbParPlaneOutlier[i])
-            {
-                mCurrentFrame.mvpParallelPlanes[i]=static_cast<MapPlane*>(NULL);
-                mCurrentFrame.mvbParPlaneOutlier[i]=false;
+        if (mCurrentFrame.mvpParallelPlanes[i]) {
+            if (mCurrentFrame.mvbParPlaneOutlier[i]) {
+                mCurrentFrame.mvpParallelPlanes[i] = static_cast<MapPlane *>(NULL);
+                mCurrentFrame.mvbParPlaneOutlier[i] = false;
             }
         }
 
-        if(mCurrentFrame.mvpVerticalPlanes[i])
-        {
-            if(mCurrentFrame.mvbVerPlaneOutlier[i])
-            {
-                mCurrentFrame.mvpVerticalPlanes[i]=static_cast<MapPlane*>(NULL);
-                mCurrentFrame.mvbVerPlaneOutlier[i]=false;
+        if (mCurrentFrame.mvpVerticalPlanes[i]) {
+            if (mCurrentFrame.mvbVerPlaneOutlier[i]) {
+                mCurrentFrame.mvpVerticalPlanes[i] = static_cast<MapPlane *>(NULL);
+                mCurrentFrame.mvbVerPlaneOutlier[i] = false;
             }
         }
     }
+
+    for (int i = 0; i < mCurrentFrame.mnNotSeenPlaneNum; ++i) {
+        if (mCurrentFrame.mvpNotSeenMapPlanes[i]) {
+            if (mCurrentFrame.mvbNotSeenPlaneOutlier[i]) {
+                mCurrentFrame.mvpNotSeenMapPlanes[i] = static_cast<MapPlane *>(NULL);
+                mCurrentFrame.mvbNotSeenPlaneOutlier[i] = false;
+            }
+        }
+    }
+
     if(nDisgardPlane>0)
         cout << "disgard plane in tracking motion: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
 
@@ -1124,6 +1139,14 @@ bool Tracking::TrackLocalMap()
     if(nDisgardPlane>0)
         cout << "disgard plane in tracking localmap: " << nDisgardPlane <<" / " << mCurrentFrame.mnPlaneNum << endl;
 
+    for (int i = 0; i < mCurrentFrame.mnNotSeenPlaneNum; ++i) {
+        if (mCurrentFrame.mvpNotSeenMapPlanes[i]) {
+            if (mCurrentFrame.mvbNotSeenPlaneOutlier[i]) {
+                mCurrentFrame.mvpNotSeenMapPlanes[i] = static_cast<MapPlane *>(NULL);
+                mCurrentFrame.mvbNotSeenPlaneOutlier[i] = false;
+            }
+        }
+    }
     // Decide if the tracking was succesful
     // More restrictive if there was a relocalization recently
     if(mCurrentFrame.mnId<mnLastRelocFrameId+mMaxFrames && mnMatchesInliers<50)
@@ -1275,7 +1298,7 @@ void Tracking::CreateNewKeyFrame()
                 mCurrentFrame.mvpVerticalPlanes[i]->AddVerObservation(pKF,i);
             }
 
-            if(mCurrentFrame.mvpMapPlanes[i]) {
+            if(mCurrentFrame.mvpMapPlanes[i] && mCurrentFrame.mvpMapPlanes[i]->mbSeen) {
                 mCurrentFrame.mvpMapPlanes[i]->AddObservation(pKF, i);
                 continue;
             }
@@ -1285,6 +1308,17 @@ void Tracking::CreateNewKeyFrame()
             MapPlane* pNewMP = new MapPlane(p3D, pKF, i);
             mpMap->AddMapPlane(pNewMP);
             pKF->AddMapPlane(pNewMP, i);
+        }
+
+        for (int i = 0; i < mCurrentFrame.mnNotSeenPlaneNum; ++i) {
+            if(mCurrentFrame.mvpNotSeenMapPlanes[i])
+                continue;
+
+            cv::Mat p3D = mCurrentFrame.ComputeNotSeenPlaneWorldCoeff(i);
+//            cout << "create new plane :" << i << "  " << mCurrentFrame.mvPlaneCoefficients[i] << endl;
+            MapPlane* pNewMP = new MapPlane(p3D, pKF, i, false);
+            mpMap->AddNotSeenMapPlane(pNewMP);
+            pKF->AddNotSeenMapPlane(pNewMP, i);
         }
 
         cout << "New map created with " << mpMap->MapPlanesInMap() << " planes" << endl;

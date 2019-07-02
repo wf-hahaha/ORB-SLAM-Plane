@@ -11,8 +11,8 @@ namespace ORB_SLAM2{
     long unsigned int MapPlane::nLastId = 0;
     mutex MapPlane::mGlobalMutex;
 
-    MapPlane::MapPlane(const cv::Mat &Pos, ORB_SLAM2::KeyFrame *pRefKF, int idx):
-    mnBALocalForKF(0), mvBoundaryPoints(new PointCloud())
+    MapPlane::MapPlane(const cv::Mat &Pos, ORB_SLAM2::KeyFrame *pRefKF, int idx, bool s):
+    mnBALocalForKF(0), mvBoundaryPoints(new PointCloud()), mbSeen(s)
     {
         Pos.copyTo(mWorldPos);
         mnId = nLastId++;
@@ -23,7 +23,10 @@ namespace ORB_SLAM2{
         mBlue = rand() % 256;
         mGreen = rand() % 256;
         Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( pRefKF->GetPose() );
-        pcl::transformPointCloud( pRefKF->mvBoundaryPoints[idx], *mvBoundaryPoints, T.inverse().matrix());
+        if(s)
+            pcl::transformPointCloud( pRefKF->mvBoundaryPoints[idx], *mvBoundaryPoints, T.inverse().matrix());
+        else
+            pcl::transformPointCloud( pRefKF->mvNotSeenBoundaryPoints[idx], *mvBoundaryPoints, T.inverse().matrix());
     }
 
     void MapPlane::AddObservation(ORB_SLAM2::KeyFrame *pKF, int idx) {

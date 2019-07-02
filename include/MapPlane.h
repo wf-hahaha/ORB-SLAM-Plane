@@ -26,7 +26,7 @@ namespace ORB_SLAM2 {
         typedef pcl::PointXYZRGB PointT;
         typedef pcl::PointCloud <PointT> PointCloud;
     public:
-        MapPlane(const cv::Mat &Pos, KeyFrame* pRefKF, int idx);
+        MapPlane(const cv::Mat &Pos, KeyFrame* pRefKF, int idx, bool s = true);
 
         void SetWorldPos(const cv::Mat &Pos);
         cv::Mat GetWorldPos();
@@ -48,6 +48,7 @@ namespace ORB_SLAM2 {
         static std::mutex mGlobalMutex;
         long unsigned int mnBALocalForKF; //used in local BA
         PointCloud::Ptr mvBoundaryPoints;
+        bool mbSeen;
 
         //used for visualization
         int mRed;

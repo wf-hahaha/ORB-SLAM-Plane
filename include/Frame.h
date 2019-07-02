@@ -124,6 +124,7 @@ public:
     bool PlaneNotSeen(const cv::Mat& coef);
     bool LineInRange(const cv::Mat& Pc);
     cv::Mat ComputePlaneWorldCoeff(const int &idx);
+    cv::Mat ComputeNotSeenPlaneWorldCoeff(const int &idx);
 
 public:
     // Vocabulary used for relocalization.
@@ -217,18 +218,25 @@ public:
 
     //For PointCloud
     std::vector<PointCloud> mvPlanePoints;
-    std::vector<PointCloud> mvNotSeenPlanePoints;
+//    std::vector<PointCloud> mvNotSeenPlanePoints;
+
     std::vector<PointCloud> mvBoundaryPoints;
+    std::vector<PointCloud> mvNotSeenBoundaryPoints;
+
     std::vector<cv::Mat> mvPlaneCoefficients;
     std::vector<cv::Mat> mvNotSeenPlaneCoefficients;
+
     std::vector<MapPlane*> mvpMapPlanes;
+    std::vector<MapPlane*> mvpNotSeenMapPlanes;
     std::vector<MapPlane*> mvpParallelPlanes;
     std::vector<MapPlane*> mvpVerticalPlanes;
     // Flag to identify outlier planes new planes.
     std::vector<bool> mvbPlaneOutlier;
+    std::vector<bool> mvbNotSeenPlaneOutlier;
     std::vector<bool> mvbParPlaneOutlier;
     std::vector<bool> mvbVerPlaneOutlier;
     int mnPlaneNum;
+    int mnNotSeenPlaneNum;
     bool mbNewPlane; // used to determine a keyframe
 private:
 

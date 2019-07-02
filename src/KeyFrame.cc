@@ -44,7 +44,9 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap),
     mvPlanePoints(F.mvPlanePoints), mvPlaneCoefficients(F.mvPlaneCoefficients), mnPlaneNum(F.mnPlaneNum),
     mvpMapPlanes(F.mvpMapPlanes), mbNewPlane(F.mbNewPlane), mvBoundaryPoints(F.mvBoundaryPoints),
-    mvpParallelPlanes(F.mvpParallelPlanes), mvpVerticalPlanes(F.mvpVerticalPlanes)
+    mvpParallelPlanes(F.mvpParallelPlanes), mvpVerticalPlanes(F.mvpVerticalPlanes),
+    mvNotSeenBoundaryPoints(F.mvNotSeenBoundaryPoints), mvNotSeenPlaneCoefficients(F.mvNotSeenPlaneCoefficients),
+    mnNotSeenPlaneNum(F.mnNotSeenPlaneNum), mvpNotSeenMapPlanes(F.mvpNotSeenMapPlanes)
 {
     mnId=nNextId++;
 
@@ -674,6 +676,11 @@ cv::Mat KeyFrame::ComputePlaneWorldCoeff(const int &idx) {
 void KeyFrame::AddMapPlane(ORB_SLAM2::MapPlane *pMP, const int &idx) {
     unique_lock<mutex> lock(mMutexFeatures);
     mvpMapPlanes[idx] = pMP;
+}
+
+void KeyFrame::AddNotSeenMapPlane(ORB_SLAM2::MapPlane *pMP, const int &idx) {
+    unique_lock<mutex> lock(mMutexFeatures);
+    mvpNotSeenMapPlanes[idx] = pMP;
 }
 
 void KeyFrame::EraseMapPlaneMatch(const int &idx) {

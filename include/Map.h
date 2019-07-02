@@ -52,6 +52,7 @@ public:
     void AddKeyFrame(KeyFrame* pKF);
     void AddMapPoint(MapPoint* pMP);
     void AddMapPlane(MapPlane* pMP);
+    void AddNotSeenMapPlane(MapPlane* pMP);
 
     std::vector<MapPlane*> GetAllMapPlanes();
 
@@ -82,6 +83,7 @@ public:
 
     long unsigned int MapPointsInMap();
     long unsigned int MapPlanesInMap();
+    long unsigned int NotSeenMapPlanesInMap();
     long unsigned  KeyFramesInMap();
 
     long unsigned int GetMaxKFid();
@@ -99,6 +101,7 @@ protected:
     std::set<MapPoint*> mspMapPoints;
     std::set<KeyFrame*> mspKeyFrames;
 
+    std::set<MapPlane*> mspNotSeenMapPlanes;
     std::vector<MapPlane*> mvpMapPlanes;
 
     std::vector<MapPoint*> mvpReferenceMapPoints;
