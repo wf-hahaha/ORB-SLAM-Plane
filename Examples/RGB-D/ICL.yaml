@@ -70,7 +70,7 @@ Viewer.ViewpointF: 500
 
 Plane.MinSize: 500
 Plane.AngleThreshold: 3.0
-Plane.DistanceThreshold: 0.03
+Plane.DistanceThreshold: 0.05
 
 Plane.LeafSize: 0.01
 Plane.MaxDistance: 10.0

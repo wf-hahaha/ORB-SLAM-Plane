@@ -217,6 +217,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
 
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
 {
+
 //    clock_t time1 = clock();
     mImGray = imRGB;
     mImDepth = imD;
@@ -240,12 +241,16 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
             cvtColor(mImGray,mImGray,CV_BGRA2GRAY);
     }
 
+//    cout << mImDepth.type() << "!!!!!!!!!!!!!!!!!" << mImDepth.size() << endl;
     if((fabs(mDepthMapFactor-1.0f)>1e-5) || mImDepth.type()!=CV_32F)
         mImDepth.convertTo(mImDepth,CV_32F,mDepthMapFactor);
+//    cout << mImDepth.type() << "!!!!!!!!!!!!!!!!!" << mImDepth.size() << endl;
 
+    cout << "New Frame!!!" << endl;
     mCurrentFrame = Frame(mImGray,mImDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
 //    cout<< "Time befor track : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
+
     Track();
 //    cout<< "Time of track : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
 
@@ -284,7 +289,7 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
 
 void Tracking::Track()
 {
-//    cout << "New Frame : " << mCurrentFrame.mnId << endl;
+    cout << "New Frame : " << mCurrentFrame.mnId << endl;
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;

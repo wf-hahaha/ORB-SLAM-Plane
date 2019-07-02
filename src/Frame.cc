@@ -181,7 +181,7 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 //    ComputePlanesFromPointCloud(imDepth);
     ComputePlanesFromOrganizedPointCloud(imDepth);
 
-    GeneratePlanesFromBoundries();
+    GeneratePlanesFromBoundries(imDepth);
 
     mnPlaneNum = mvPlanePoints.size();
     mvpMapPlanes = vector<MapPlane*>(mnPlaneNum,static_cast<MapPlane*>(nullptr));
@@ -195,20 +195,31 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     mvpNotSeenMapPlanes = vector<MapPlane*>(mnNotSeenPlaneNum,static_cast<MapPlane*>(nullptr));
     mvbNotSeenPlaneOutlier = vector<bool>(mnNotSeenPlaneNum,false);
 
-//    pcl::visualization::CloudViewer viewer("plane viewer");
-//
-//    PointCloud::Ptr showingCloud(new PointCloud);
-//
-//    for(int x = 0; x < mvPlanePoints.size(); ++x) {
-//        *showingCloud += mvPlanePoints[x];
-//    }
-//
-//    for(int i = 0;i < mvNotSeenPlanePoints.size(); ++i){
-//        *showingCloud += mvNotSeenPlanePoints[i];
-//    }
-//    viewer.showCloud(showingCloud);
-//    getchar();
+    if(mvNotSeenPlanePoints.size() > 0) {
+        pcl::visualization::CloudViewer viewer("plane viewer");
 
+        PointCloud::Ptr showingCloud(new PointCloud);
+
+        for (int x = 0; x < mvPlanePoints.size(); ++x) {
+            *showingCloud += mvPlanePoints[x];
+        }
+
+        for (int i = 0; i < mvNotSeenPlanePoints.size(); ++i) {
+            *showingCloud += mvNotSeenPlanePoints[i];
+        }
+
+        for (int j = 0; j < mvBoundaryPoints.size(); ++j) {
+            for (auto &p : mvBoundaryPoints[j].points) {
+                p.r = 0;
+                p.g = 255;
+                p.b = 0;
+            }
+            *showingCloud += mvBoundaryPoints[j];
+        }
+
+        viewer.showCloud(showingCloud);
+        getchar();
+    }
 //    cout << "plane " << mnId << " : " << endl;
 //    cout << "  find plane: " << mvPlanePoints.size() << endl;
 //    for(int x = 0; x < mvPlanePoints.size(); ++x){
@@ -218,7 +229,6 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 //                << mvPlaneCoefficients[x].values[2]  << "  "
 //                << mvPlaneCoefficients[x].values[3]  << "  " << endl;
 //    }
-
 }
 
 // monocular
@@ -866,7 +876,6 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
         std::vector<pcl::PlanarRegion<PointT>, Eigen::aligned_allocator<pcl::PlanarRegion<PointT>>> regions;
         mps.segmentAndRefine (regions, coefficients, inliers, labels, label_indices, boundary);
 
-
         pcl::ExtractIndices<PointT> extract;
         extract.setInputCloud(inputCloud);
         extract.setNegative(false);
@@ -885,12 +894,14 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
                                                     coefficients[i].values[1],
                                                     coefficients[i].values[2],
                                                     coefficients[i].values[3]);
+            if(coef.at<float>(3) < 0)
+                coef = -coef;
             mvPlaneCoefficients.push_back(coef);
         }
 
     }
 
-    void Frame::GeneratePlanesFromBoundries() {
+    void Frame::GeneratePlanesFromBoundries(const cv::Mat &imDepth) {
         pcl::SACSegmentation<PointT> segLine;
         pcl::ExtractIndices<PointT> extract;
         double lineRatio = Config::Get<double>("Line.Ratio");
@@ -917,23 +928,24 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
 
                 extract.setInputCloud(boundPoints);
                 extract.setIndices(lineins);
-
+                extract.setNegative(false);
+                extract.filter(*linePoints);
                 cv::Mat pc = (cv::Mat_<float>(3,1) << coeffline->values[0], coeffline->values[1], coeffline->values[2]);
 
-                if(LineInRange(pc)) {
+                if(LineInRange(pc) && IsBorderLine(linePoints,imDepth)) {
                     cv::Mat coef = (cv::Mat_<float>(6,1) << coeffline->values[0],
                             coeffline->values[1],
                             coeffline->values[2],
                             coeffline->values[3],
                             coeffline->values[4],
                             coeffline->values[5]);
-
+                    cout << "test plane:" << endl;
                     if(CaculatePlanes(mvPlaneCoefficients[i], coef)){
-                        extract.setNegative(false);
-                        extract.filter(*linePoints);
+                        cout << "success" << endl << endl;
                         mvNotSeenBoundaryPoints.push_back(*linePoints);
 //                        mvBoundaryPoints.push_back(*linePoints);
-                    }
+                    }else
+                        cout << "fail" << endl << endl;
                 }
 
                 extract.setNegative(true);
@@ -942,6 +954,57 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
             }
         }
 
+}
+
+    bool Frame::IsBorderLine(const PointCloud::Ptr line, const cv::Mat &imDepth) {
+        int s = line->points.size();
+        int res = 0;
+//        cout << "size: " << s << endl;
+        for(auto p:line->points){
+            cv::Mat pc = (cv::Mat_<float>(3,1) << p.x, p.y, p.z);
+            if(!IsBorderPoint(pc,imDepth))
+                res ++;
+            if(res > s/5)
+                return false;
+//            cout << endl;
+        }
+        return true;
+}
+
+    bool Frame::IsBorderPoint(const cv::Mat &Pc, const cv::Mat &imDepth) {
+        const float &PcX = Pc.at<float>(0);
+        const float &PcY = Pc.at<float>(1);
+        const float &PcZ = Pc.at<float>(2);
+        if(PcZ<0.0f)
+            return false;
+
+        const float invz = 1.0f/PcZ;
+        const float u=fx*PcX*invz+cx;
+        const float v=fy*PcY*invz+cy;
+        int num = 0, nan = 0;
+        float res = 0;
+        int b = 10;
+        for(int j = v - b; j < v + b; ++j){
+            for(int i = u - b; i < u + b; ++i){
+//                cout << imDepth.ptr<float>(j)[i] << ",";
+                if(imDepth.ptr<float>(j)[i] > 0.05){
+                    res += imDepth.ptr<float>(j)[i];
+                    num++;
+                }else{
+                    nan++;
+                    if(nan > b*b){
+//                        cout << "find! " << nan << endl;
+                        return false;
+                    }
+                }
+            }
+//            cout << endl;
+        }
+        if(PcZ - res/num > 0.1){
+//            cout << "find! " << res/num << " : " << PcZ << endl;
+            return false;
+        }
+        return true;
 }
 
     bool Frame::LineInRange(const cv::Mat &Pc) {
@@ -975,31 +1038,31 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
         float v = sqrt(a*a + b*b + c*c);
 
         cv::Mat coef = (cv::Mat_<float>(4,1) << a/v, b/v, c/v, -d/v);
-
+        if(coef.at<float>(3) < 0)
+            coef = -coef;
         if(PlaneNotSeen(coef)){
-
 //            mvPlaneCoefficients.push_back(coef);
             mvNotSeenPlaneCoefficients.push_back(coef);
-//            PointCloud cloud;
-//            PointT p;
-//            for(float i = inputline.at<float>(0)-0.5; i < inputline.at<float>(0)+0.5;){
-//                p.x = i;
-//                for(float j = inputline.at<float>(1)-0.5; j < inputline.at<float>(1)+0.5;){
-//                    p.y = j;
-//                    p.z = (coef.at<float>(0)*p.x + coef.at<float>(1)*p.y + coef.at<float>(3)) / (-coef.at<float>(2));
-//                    p.r = 255;
-//                    p.g = 0;
-//                    p.b = 0;
-//                    cloud.points.push_back(p);
-//                    j+=0.02;
-//                }
-//                i+=0.02;
-//            }
-//            cloud.height = 1;
-//            cloud.width = cloud.points.size();
+            PointCloud cloud;
+            PointT p;
+            for(float i = inputline.at<float>(0)-0.5; i < inputline.at<float>(0)+0.5;){
+                p.x = i;
+                for(float j = inputline.at<float>(1)-0.5; j < inputline.at<float>(1)+0.5;){
+                    p.y = j;
+                    p.z = (coef.at<float>(0)*p.x + coef.at<float>(1)*p.y + coef.at<float>(3)) / (-coef.at<float>(2));
+                    p.r = 255;
+                    p.g = 0;
+                    p.b = 0;
+                    cloud.points.push_back(p);
+                    j+=0.02;
+                }
+                i+=0.02;
+            }
+            cloud.height = 1;
+            cloud.width = cloud.points.size();
 //
 ////            mvPlanePoints.push_back(cloud);
-//            mvNotSeenPlanePoints.push_back(cloud);
+            mvNotSeenPlanePoints.push_back(cloud);
             return true;
         }
         return false;
@@ -1009,35 +1072,36 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
         for (int j = 0; j < mvPlaneCoefficients.size(); ++j) {
             cv::Mat pM = mvPlaneCoefficients[j];
             float d = pM.at<float>(3,0) - coef.at<float>(3,0);
-            if(d > 0.2 || d < -0.2)
-                continue;
             float angle = pM.at<float>(0,0) * coef.at<float>(0,0) +
                           pM.at<float>(1,0) * coef.at<float>(1,0) +
                           pM.at<float>(2,0) * coef.at<float>(2,0);
-            if(angle < 0.965 && angle > -0.965)
+
+//            cout << " d: " << d << " angle: " << angle << endl;
+            if(d > 0.3 || d < -0.3)
                 continue;
 
+            if(angle < 0.9397 && angle > -0.9397)
+                continue;
+//            cout << "Old!" << endl;
             return false;
         }
-
         for (int j = 0; j < mvNotSeenPlaneCoefficients.size(); ++j) {
             cv::Mat pM = mvNotSeenPlaneCoefficients[j];
             float d = pM.at<float>(3,0) - coef.at<float>(3,0);
-            if(d > 0.2 || d < -0.2)
-                continue;
             float angle = pM.at<float>(0,0) * coef.at<float>(0,0) +
                           pM.at<float>(1,0) * coef.at<float>(1,0) +
                           pM.at<float>(2,0) * coef.at<float>(2,0);
-            if(angle < 0.965 && angle > -0.965)
+//            cout << " d: " << d << " angle: " << angle << endl;
+            if(d > 0.3 || d < -0.3)
                 continue;
-
+            if(angle < 0.9397 && angle > -0.9397)
+                continue;
+//            cout << "Old!" << endl;
             return false;
         }
-
+//        cout << "New!" << endl;
         return true;
 }
-
-
 
     cv::Mat Frame::ComputePlaneWorldCoeff(const int &idx) {
         cv::Mat temp;
