@@ -53,6 +53,7 @@ public:
     void AddMapPoint(MapPoint* pMP);
     void AddMapPlane(MapPlane* pMP);
     void AddNotSeenMapPlane(MapPlane* pMP);
+    void EraseNotSeenMapPlane(MapPlane* pMP);
 
     std::vector<MapPlane*> GetAllMapPlanes();
 

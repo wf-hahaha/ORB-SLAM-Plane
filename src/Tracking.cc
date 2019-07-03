@@ -154,7 +154,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
             mDepthMapFactor = 1.0f/mDepthMapFactor;
     }
 
-//    mpPointCloudMapping = make_shared<PointCloudMapping>(mpMap);
+    mpPointCloudMapping = make_shared<PointCloudMapping>(mpMap);
 
 }
 
@@ -246,7 +246,7 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
         mImDepth.convertTo(mImDepth,CV_32F,mDepthMapFactor);
 //    cout << mImDepth.type() << "!!!!!!!!!!!!!!!!!" << mImDepth.size() << endl;
 
-    cout << "New Frame!!!" << endl;
+//    cout << "New Frame!!!" << endl;
     mCurrentFrame = Frame(mImGray,mImDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
 //    cout<< "Time befor track : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
@@ -807,7 +807,7 @@ void Tracking::CheckReplacedInLastFrame()
 
 bool Tracking::TrackReferenceKeyFrame()
 {
-    cout << "Track reference frame ... " << endl;
+//    cout << "Track reference frame ... " << endl;
     // Compute Bag of Words vector
     mCurrentFrame.ComputeBoW();
 
@@ -968,7 +968,7 @@ void Tracking::UpdateLastFrame()
 
 bool Tracking::TrackWithMotionModel()
 {
-    cout << "Track Motion Frame ... " << endl;
+//    cout << "Track Motion Frame ... " << endl;
     ORBmatcher matcher(0.9,true);
 
     // Update last frame pose according to its reference keyframe
@@ -1072,7 +1072,7 @@ bool Tracking::TrackWithMotionModel()
 
 bool Tracking::TrackLocalMap()
 {
-    cout << "Tracking Local Map ..." << endl;
+//    cout << "Tracking Local Map ..." << endl;
     // We have an estimation of the camera pose and some map points tracked in the frame.
     // We retrieve the local map and try to find matches to points in the local map.
     UpdateLocalMap();
@@ -1303,8 +1303,14 @@ void Tracking::CreateNewKeyFrame()
                 mCurrentFrame.mvpVerticalPlanes[i]->AddVerObservation(pKF,i);
             }
 
-            if(mCurrentFrame.mvpMapPlanes[i] && mCurrentFrame.mvpMapPlanes[i]->mbSeen) {
+            if(mCurrentFrame.mvpMapPlanes[i]) {
                 mCurrentFrame.mvpMapPlanes[i]->AddObservation(pKF, i);
+                if(!mCurrentFrame.mvpMapPlanes[i]->mbSeen) {
+                    mCurrentFrame.mvpMapPlanes[i]->mbSeen = true;
+                    mpMap->AddMapPlane(mCurrentFrame.mvpMapPlanes[i]);
+                    mpMap->EraseNotSeenMapPlane(mCurrentFrame.mvpMapPlanes[i]);
+//                    pKF->AddMapPlane(mCurrentFrame.mvpMapPlanes[i], i);
+                }
                 continue;
             }
 
@@ -1316,8 +1322,10 @@ void Tracking::CreateNewKeyFrame()
         }
 
         for (int i = 0; i < mCurrentFrame.mnNotSeenPlaneNum; ++i) {
-            if(mCurrentFrame.mvpNotSeenMapPlanes[i])
+            if(mCurrentFrame.mvpNotSeenMapPlanes[i]) {
+                mCurrentFrame.mvpNotSeenMapPlanes[i]->AddNotSeenObservation(pKF,i);
                 continue;
+            }
 
             cv::Mat p3D = mCurrentFrame.ComputeNotSeenPlaneWorldCoeff(i);
 //            cout << "create new plane :" << i << "  " << mCurrentFrame.mvPlaneCoefficients[i] << endl;

@@ -32,14 +32,18 @@ namespace ORB_SLAM2 {
         cv::Mat GetWorldPos();
 
         void AddObservation(KeyFrame* pKF, int idx);
+        void AddNotSeenObservation(KeyFrame* pKF, int idx);
         void AddParObservation(KeyFrame* pKF, int idx);
         void AddVerObservation(KeyFrame* pKF, int idx);
 
         void EraseObservation(KeyFrame* pKF);
+        void EraseNotSeenObservation(KeyFrame* pKF);
         map<KeyFrame*, int> GetObservations();
+        map<KeyFrame*, int> GetNotSeenObservations();
         map<KeyFrame*, int> GetParObservations();
         map<KeyFrame*, int> GetVerObservations();
         int GetIndexInKeyFrame(KeyFrame *pKF);
+        int GetNotSeenIndexInKeyFrame(KeyFrame *pKF);
         void UpdateBoundary(const Frame& pF, int id);
 
     public:
@@ -57,6 +61,7 @@ namespace ORB_SLAM2 {
     protected:
         cv::Mat mWorldPos; ///< Position in absolute coordinates
         std::map<KeyFrame*, int> mObservations;
+        std::map<KeyFrame*, int> mNotSeenObservations;
         std::map<KeyFrame*, int> mParObservations;
         std::map<KeyFrame*, int> mVerObservations;
 

@@ -48,7 +48,7 @@ namespace ORB_SLAM2 {
     void PointCloudMapping::viewer() {
         pcl::visualization::CloudViewer viewer("viewer");
         pcl::VoxelGrid<PointT>  voxel;
-        voxel.setLeafSize( 0.04, 0.04, 0.04);
+        voxel.setLeafSize( 0.02, 0.02, 0.02);
         while(1)
         {
             {
@@ -68,9 +68,11 @@ namespace ORB_SLAM2 {
                     KeyFrame* frame = mit->first;
                     int id = mit->second;
                     for(auto& p : frame->mvPlanePoints[id].points){
-                        p.r = ir;
-                        p.g = ig;
-                        p.b = ib;
+                        if(p.r != 255) {
+                            p.r = ir;
+                            p.g = ig;
+                            p.b = ib;
+                        }
                     }
                     Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( frame->GetPose() );
                     PointCloud::Ptr cloud(new PointCloud);
@@ -86,7 +88,7 @@ namespace ORB_SLAM2 {
             viewer.showCloud( mAllCloudPoints );
         }
     }
-//
+
 //    void PointCloudMapping::viewer() {
 //        pcl::visualization::CloudViewer viewer("viewer");
 //        pcl::VoxelGrid<PointT>  voxel;

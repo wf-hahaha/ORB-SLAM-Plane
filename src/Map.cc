@@ -53,6 +53,11 @@ void Map::AddNotSeenMapPlane(ORB_SLAM2::MapPlane *pMP) {
     mspNotSeenMapPlanes.insert(pMP);
 }
 
+void Map::EraseNotSeenMapPlane(ORB_SLAM2::MapPlane *pMP) {
+    unique_lock<mutex> lock(mMutexMap);
+    mspNotSeenMapPlanes.erase(pMP);
+}
+
 void Map::EraseMapPoint(MapPoint *pMP)
 {
     unique_lock<mutex> lock(mMutexMap);
@@ -415,7 +420,6 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
             }
 
             if(ldTh == dTh){ // associate in not seen planes
-                ldTh = 0.15;
                 for(auto it = mspNotSeenMapPlanes.begin(),iend = mspNotSeenMapPlanes.end(); it!=iend; ++it){
                     cv::Mat pW = (*it)->GetWorldPos();
 
@@ -426,7 +430,7 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                     if(out)
                         cout  << ":  angle : " << angle << endl;
 
-                    if ((angle > 0.965 || angle < -0.965)) // associate plane
+                    if ((angle > aTh || angle < -aTh)) // associate plane
                     {
 
                         double dis = PointDistanceFromPlane(pM, (*it)->mvBoundaryPoints, out);
@@ -447,9 +451,7 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
 
         for (int i = 0; i < pF.mnNotSeenPlaneNum; ++i) {
             cv::Mat pM = pF.ComputeNotSeenPlaneWorldCoeff(i);
-
-            float ldTh = 0.15;
-
+            float ldTh = dTh;
             for (int j = 0;j < mvpMapPlanes.size(); ++j) {
                 cv::Mat pW = mvpMapPlanes[j]->GetWorldPos();
 
@@ -457,7 +459,7 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                               pM.at<float>(1, 0) * pW.at<float>(1, 0) +
                               pM.at<float>(2, 0) * pW.at<float>(2, 0);
 
-                if ((angle > 0.965 || angle < -0.965)) // associate plane
+                if ((angle > aTh || angle < -aTh)) // associate plane
                 {
                     double dis = PointDistanceFromPlane(pM, mvpMapPlanes[j]->mvBoundaryPoints, out);
                     if (dis < ldTh) {
@@ -470,8 +472,7 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                 }
             }
 
-
-            if(ldTh == 0.15){ // associate in not seen planes
+            if(ldTh == dTh){ // associate in not seen planes
                 for(auto it = mspNotSeenMapPlanes.begin(),iend = mspNotSeenMapPlanes.end(); it!=iend; ++it){
                     cv::Mat pW = (*it)->GetWorldPos();
 
@@ -482,7 +483,7 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                     if(out)
                         cout  << ":  angle : " << angle << endl;
 
-                    if ((angle > 0.965 || angle < -0.965)) // associate plane
+                    if ((angle > aTh || angle < -aTh)) // associate plane
                     {
 
                         double dis = PointDistanceFromPlane(pM, (*it)->mvBoundaryPoints, out);

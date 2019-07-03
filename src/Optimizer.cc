@@ -456,9 +456,9 @@ int Optimizer::PoseOptimization(Frame *pFrame)
                             0, 0, disInfo;
                 }
                 else{
-                    Info << angleInfo/2, 0, 0,
-                            0, angleInfo/2, 0,
-                            0, 0, disInfo/2;
+                    Info << 2*angleInfo, 0, 0,
+                            0, 2*angleInfo, 0,
+                            0, 0, 2*disInfo;
                 }
 
                 e->setInformation(Info);
@@ -901,8 +901,10 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     // Local MapPoints seen in Local KeyFrames
     //  &&
     // Local MapPlanes seen in Local KeyFrames
+    // Local MapPlanes not seen in Local KeyFrames
     list<MapPoint*> lLocalMapPoints;
     list<MapPlane*> lLocalMapPlanes;
+    list<MapPlane*> lLocalNotSeenMapPlanes;
     for(list<KeyFrame*>::iterator lit=lLocalKeyFrames.begin() , lend=lLocalKeyFrames.end(); lit!=lend; lit++)
     {
         vector<MapPoint*> vpMPs = (*lit)->GetMapPointMatches();
@@ -926,8 +928,17 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
                     pMP->mnBALocalForKF = pKF->mnId;
                 }
         }
+    }
 
-
+    for(list<KeyFrame*>::iterator lit=lLocalKeyFrames.begin() , lend=lLocalKeyFrames.end(); lit!=lend; lit++) {
+        for (int i = 0; i < (*lit)->mnNotSeenPlaneNum; ++i) {
+            MapPlane *pMP = (*lit)->mvpNotSeenMapPlanes[i];
+            if (pMP)
+                if (pMP->mnBALocalForKF != pKF->mnId) {
+                    lLocalNotSeenMapPlanes.push_back(pMP);
+                    pMP->mnBALocalForKF = pKF->mnId;
+                }
+        }
     }
 
     // Fixed Keyframes. Keyframes that see Local MapPoints but that are not Local Keyframes
@@ -961,6 +972,20 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
                     lFixedCameras.push_back(pKFi);
             }
         }
+
+        map<KeyFrame*,int> notseenobservations = (*lit)->GetNotSeenObservations();
+        for(map<KeyFrame*,int>::iterator mit=notseenobservations.begin(), mend=notseenobservations.end(); mit!=mend; mit++)
+        {
+            KeyFrame* pKFi = mit->first;
+
+            if(pKFi->mnBALocalForKF!=pKF->mnId && pKFi->mnBAFixedForKF!=pKF->mnId)
+            {
+                pKFi->mnBAFixedForKF=pKF->mnId;
+                if(!pKFi->isBad())
+                    lFixedCameras.push_back(pKFi);
+            }
+        }
+
         map<KeyFrame*,int> verObservations = (*lit)->GetVerObservations();
         for(map<KeyFrame*,int>::iterator mit=verObservations.begin(), mend=verObservations.end(); mit!=mend; mit++)
         {
@@ -986,6 +1011,61 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
             }
         }
     }
+
+    // Fixed Keyframes. Keyframes that see Local MapPlanes but that are not Local Keyframes
+    for(list<MapPlane*>::iterator lit=lLocalNotSeenMapPlanes.begin(), lend=lLocalNotSeenMapPlanes.end(); lit!=lend; lit++){
+        map<KeyFrame*,int> observations = (*lit)->GetObservations();
+        for(map<KeyFrame*,int>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
+        {
+            KeyFrame* pKFi = mit->first;
+
+            if(pKFi->mnBALocalForKF!=pKF->mnId && pKFi->mnBAFixedForKF!=pKF->mnId)
+            {
+                pKFi->mnBAFixedForKF=pKF->mnId;
+                if(!pKFi->isBad())
+                    lFixedCameras.push_back(pKFi);
+            }
+        }
+
+        map<KeyFrame*,int> notseenobservations = (*lit)->GetNotSeenObservations();
+        for(map<KeyFrame*,int>::iterator mit=notseenobservations.begin(), mend=notseenobservations.end(); mit!=mend; mit++)
+        {
+            KeyFrame* pKFi = mit->first;
+
+            if(pKFi->mnBALocalForKF!=pKF->mnId && pKFi->mnBAFixedForKF!=pKF->mnId)
+            {
+                pKFi->mnBAFixedForKF=pKF->mnId;
+                if(!pKFi->isBad())
+                    lFixedCameras.push_back(pKFi);
+            }
+        }
+
+        map<KeyFrame*,int> verObservations = (*lit)->GetVerObservations();
+        for(map<KeyFrame*,int>::iterator mit=verObservations.begin(), mend=verObservations.end(); mit!=mend; mit++)
+        {
+            KeyFrame* pKFi = mit->first;
+
+            if(pKFi->mnBALocalForKF!=pKF->mnId && pKFi->mnBAFixedForKF!=pKF->mnId)
+            {
+                pKFi->mnBAFixedForKF=pKF->mnId;
+                if(!pKFi->isBad())
+                    lFixedCameras.push_back(pKFi);
+            }
+        }
+        map<KeyFrame*,int> parObservations = (*lit)->GetParObservations();
+        for(map<KeyFrame*,int>::iterator mit=parObservations.begin(), mend=parObservations.end(); mit!=mend; mit++)
+        {
+            KeyFrame* pKFi = mit->first;
+
+            if(pKFi->mnBALocalForKF!=pKF->mnId && pKFi->mnBAFixedForKF!=pKF->mnId)
+            {
+                pKFi->mnBAFixedForKF=pKF->mnId;
+                if(!pKFi->isBad())
+                    lFixedCameras.push_back(pKFi);
+            }
+        }
+    }
+
 
     // Setup optimizer
     g2o::SparseOptimizer optimizer;
@@ -1138,9 +1218,12 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
             }
         }
     }
-    const int nExpectedPlaneEdgeSize = (lLocalKeyFrames.size()+lFixedCameras.size())*lLocalMapPlanes.size();
+    const int nExpectedPlaneEdgeSize = (lLocalKeyFrames.size()+lFixedCameras.size())*(lLocalMapPlanes.size()+lLocalNotSeenMapPlanes.size());
     vector<g2o::EdgePlane*> vpEdgesPlane;
     vpEdgesPlane.reserve(nExpectedPlaneEdgeSize);
+
+    vector<g2o::EdgePlane*> vpEdgesNotSeenPlane;
+    vpEdgesNotSeenPlane.reserve(nExpectedPlaneEdgeSize);
 
     vector<g2o::EdgeParallelPlane*> vpEdgesParPlane;
     vpEdgesParPlane.reserve(nExpectedPlaneEdgeSize);
@@ -1154,6 +1237,12 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     vector<MapPlane*> vpMapPlane;
     vpMapPlane.reserve(nExpectedPlaneEdgeSize);
 
+    vector<KeyFrame*> vpEdgeKFNotSeenPlane;
+    vpEdgeKFNotSeenPlane.reserve(nExpectedPlaneEdgeSize);
+
+    vector<MapPlane*> vpNotSeenMapPlane;
+    vpNotSeenMapPlane.reserve(nExpectedPlaneEdgeSize);
+
     double angleInfo = Config::Get<double>("Plane.AngleInfo");
     angleInfo = 3282.8/(angleInfo*angleInfo);
     double disInfo = Config::Get<double>("Plane.DistanceInfo");
@@ -1166,6 +1255,7 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     const float deltaPlane = sqrt(planeChi);
     double VPplaneChi = Config::Get<double>("Plane.VPChi");
     const float VPdeltaPlane = sqrt(VPplaneChi);
+
     for (list<MapPlane *>::iterator lit = lLocalMapPlanes.begin(), lend = lLocalMapPlanes.end();
          lit != lend; lit++) {
 
@@ -1201,6 +1291,147 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
                 vpEdgesPlane.push_back(e);
                 vpEdgeKFPlane.push_back(pKFi);
                 vpMapPlane.push_back(pMP);
+            }
+        }
+
+        const map<KeyFrame *, int> notseenobservations = pMP->GetNotSeenObservations();
+        for (map<KeyFrame *, int>::const_iterator mit = notseenobservations.begin(), mend = notseenobservations.end();
+             mit != mend; mit++) {
+            KeyFrame *pKFi = mit->first;
+            if (!pKFi->isBad()) {
+                g2o::EdgePlane *e = new g2o::EdgePlane();
+                if (optimizer.vertex(id) == NULL || optimizer.vertex(pKFi->mnId) == NULL)
+                    continue;
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(id)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pKFi->mnId)));
+                e->setMeasurement(Converter::toPlane3D(pKFi->mvNotSeenPlaneCoefficients[mit->second]));
+                Eigen::Matrix3d Info;
+                Info << angleInfo/2, 0, 0,
+                        0, angleInfo/2, 0,
+                        0, 0, disInfo/2;
+                e->setInformation(Info);
+                g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
+                e->setRobustKernel(rk);
+                rk->setDelta(deltaPlane/2);
+                optimizer.addEdge(e);
+
+                vpEdgesNotSeenPlane.push_back(e);
+                vpEdgeKFNotSeenPlane.push_back(pKFi);
+                vpNotSeenMapPlane.push_back(pMP);
+            }
+        }
+
+        const map<KeyFrame *, int> verObservations = pMP->GetVerObservations();
+        for (map<KeyFrame *, int>::const_iterator mit = verObservations.begin(), mend = verObservations.end();
+             mit != mend; mit++) {
+            KeyFrame *pKFi = mit->first;
+            if (!pKFi->isBad()) {
+                g2o::EdgeVerticalPlane *e = new g2o::EdgeVerticalPlane();
+                if (optimizer.vertex(id) == NULL || optimizer.vertex(pKFi->mnId) == NULL)
+                    continue;
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(id)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pKFi->mnId)));
+                e->setMeasurement(Converter::toPlane3D(pKFi->mvPlaneCoefficients[mit->second]));
+                Eigen::Matrix2d Info;
+                Info << verInfo, 0,
+                        0, verInfo;
+                e->setInformation(Info);
+                g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
+                e->setRobustKernel(rk);
+                rk->setDelta(VPdeltaPlane);
+                optimizer.addEdge(e);
+
+                vpEdgesVerPlane.push_back(e);
+            }
+        }
+
+        const map<KeyFrame *, int> parObservations = pMP->GetParObservations();
+        for (map<KeyFrame *, int>::const_iterator mit = parObservations.begin(), mend = parObservations.end();
+             mit != mend; mit++) {
+            KeyFrame *pKFi = mit->first;
+            if (!pKFi->isBad()) {
+                g2o::EdgeParallelPlane *e = new g2o::EdgeParallelPlane();
+                if (optimizer.vertex(id) == NULL || optimizer.vertex(pKFi->mnId) == NULL)
+                    continue;
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(id)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pKFi->mnId)));
+                e->setMeasurement(Converter::toPlane3D(pKFi->mvPlaneCoefficients[mit->second]));
+                Eigen::Matrix2d Info;
+                Info << parInfo, 0,
+                        0, parInfo;
+                e->setInformation(Info);
+                g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
+                e->setRobustKernel(rk);
+                rk->setDelta(VPdeltaPlane);
+                optimizer.addEdge(e);
+
+                vpEdgesParPlane.push_back(e);
+            }
+        }
+    }
+
+    for (list<MapPlane *>::iterator lit = lLocalNotSeenMapPlanes.begin(), lend = lLocalNotSeenMapPlanes.end();
+         lit != lend; lit++) {
+
+        MapPlane *pMP = *lit;
+        g2o::VertexPlane *vPlane = new g2o::VertexPlane();
+        vPlane->setEstimate(Converter::toPlane3D(pMP->GetWorldPos()));
+        int id = pMP->mnId + maxPointid + 1;
+        vPlane->setId(id);
+        vPlane->setMarginalized(true);
+        optimizer.addVertex(vPlane);
+
+        const map<KeyFrame *, int> observations = pMP->GetObservations();
+        for (map<KeyFrame *, int>::const_iterator mit = observations.begin(), mend = observations.end();
+             mit != mend; mit++) {
+            KeyFrame *pKFi = mit->first;
+            if (!pKFi->isBad()) {
+                g2o::EdgePlane *e = new g2o::EdgePlane();
+                if (optimizer.vertex(id) == NULL || optimizer.vertex(pKFi->mnId) == NULL)
+                    continue;
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(id)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pKFi->mnId)));
+                e->setMeasurement(Converter::toPlane3D(pKFi->mvPlaneCoefficients[mit->second]));
+                Eigen::Matrix3d Info;
+                Info << angleInfo, 0, 0,
+                        0, angleInfo, 0,
+                        0, 0, disInfo;
+                e->setInformation(Info);
+                g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
+                e->setRobustKernel(rk);
+                rk->setDelta(deltaPlane);
+                optimizer.addEdge(e);
+
+                vpEdgesPlane.push_back(e);
+                vpEdgeKFPlane.push_back(pKFi);
+                vpMapPlane.push_back(pMP);
+            }
+        }
+
+        const map<KeyFrame *, int> notseenobservations = pMP->GetNotSeenObservations();
+        for (map<KeyFrame *, int>::const_iterator mit = notseenobservations.begin(), mend = notseenobservations.end();
+             mit != mend; mit++) {
+            KeyFrame *pKFi = mit->first;
+            if (!pKFi->isBad()) {
+                g2o::EdgePlane *e = new g2o::EdgePlane();
+                if (optimizer.vertex(id) == NULL || optimizer.vertex(pKFi->mnId) == NULL)
+                    continue;
+                e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(id)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex *>(optimizer.vertex(pKFi->mnId)));
+                e->setMeasurement(Converter::toPlane3D(pKFi->mvNotSeenPlaneCoefficients[mit->second]));
+                Eigen::Matrix3d Info;
+                Info << angleInfo/2, 0, 0,
+                        0, angleInfo/2, 0,
+                        0, 0, disInfo/2;
+                e->setInformation(Info);
+                g2o::RobustKernelHuber *rk = new g2o::RobustKernelHuber;
+                e->setRobustKernel(rk);
+                rk->setDelta(deltaPlane/2);
+                optimizer.addEdge(e);
+
+                vpEdgesNotSeenPlane.push_back(e);
+                vpEdgeKFNotSeenPlane.push_back(pKFi);
+                vpNotSeenMapPlane.push_back(pMP);
             }
         }
 
@@ -1306,6 +1537,16 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
             e->setRobustKernel(0);
         }
 
+        for (size_t i = 0, iend = vpEdgesNotSeenPlane.size(); i < iend; i++) {
+            g2o::EdgePlane *e = vpEdgesPlane[i];
+
+            if (e->chi2() > planeChi/2) {
+                e->setLevel(1);
+            }
+
+            e->setRobustKernel(0);
+        }
+
         for (size_t i = 0, iend = vpEdgesParPlane.size(); i < iend; i++) {
             g2o::EdgeParallelPlane *e = vpEdgesParPlane[i];
 
@@ -1337,6 +1578,8 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
     vector<pair<KeyFrame*, MapPlane*> > vToErasePlane;
     vToErasePlane.reserve(vpEdgesPlane.size());
 
+    vector<pair<KeyFrame*, MapPlane*> > vToEraseNotSeenPlane;
+    vToEraseNotSeenPlane.reserve(vpEdgesNotSeenPlane.size());
     // Check inlier observations       
     for(size_t i=0, iend=vpEdgesMono.size(); i<iend;i++)
     {
@@ -1380,6 +1623,19 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         }
 
     }
+
+    for(size_t i=0, iend=vpEdgesNotSeenPlane.size(); i<iend;i++)
+    {
+        g2o::EdgePlane* e = vpEdgesNotSeenPlane[i];
+
+        if(e->chi2()>planeChi/2)
+        {
+            MapPlane* pMP = vpNotSeenMapPlane[i];
+            KeyFrame* pKFi = vpEdgeKFNotSeenPlane[i];
+            vToEraseNotSeenPlane.push_back(make_pair(pKFi, pMP));
+        }
+
+    }
     // Get Map Mutex
     unique_lock<mutex> lock(pMap->mMutexMapUpdate);
 
@@ -1404,6 +1660,15 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         }
     }
 
+    if(!vToEraseNotSeenPlane.empty()){
+        for(size_t i=0;i<vToEraseNotSeenPlane.size();i++)
+        {
+            KeyFrame* pKFi = vToEraseNotSeenPlane[i].first;
+            MapPlane* pMPi = vToEraseNotSeenPlane[i].second;
+            pKFi->EraseNotSeenMapPlaneMatch(pMPi);
+            pMPi->EraseNotSeenObservation(pKFi);
+        }
+    }
     // Recover optimized data
 
     //Keyframes
@@ -1430,6 +1695,14 @@ void Optimizer::LocalBundleAdjustment(KeyFrame *pKF, bool* pbStopFlag, Map* pMap
         g2o::VertexPlane* vPlane = static_cast<g2o::VertexPlane*>(optimizer.vertex(pMP->mnId+maxPointid+1));
         pMP->SetWorldPos(Converter::toCvMat(vPlane->estimate()));
     }
+    //Not Seen Planes
+    for(list<MapPlane*>::iterator lit=lLocalNotSeenMapPlanes.begin(), lend=lLocalNotSeenMapPlanes.end(); lit!=lend; lit++)
+    {
+        MapPlane* pMP = *lit;
+        g2o::VertexPlane* vPlane = static_cast<g2o::VertexPlane*>(optimizer.vertex(pMP->mnId+maxPointid+1));
+        pMP->SetWorldPos(Converter::toCvMat(vPlane->estimate()));
+    }
+
 //    cout<< "Time of Local BA : " << 1000*(clock() - time1)/(double)CLOCKS_PER_SEC << "ms" << endl;
 }
 

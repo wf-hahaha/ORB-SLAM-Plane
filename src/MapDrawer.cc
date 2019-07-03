@@ -26,9 +26,11 @@
 #include <mutex>
 #include <pcl/common/transforms.h>
 #include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
 namespace ORB_SLAM2
 {
-
+    typedef pcl::PointXYZRGB PointT;
+    typedef pcl::PointCloud<PointT> PointCloud;
 
 MapDrawer::MapDrawer(Map* pMap, const string &strSettingPath):mpMap(pMap)
 {
@@ -88,7 +90,8 @@ void MapDrawer::DrawMapPlanes() {
         return;
     glPointSize(mPointSize/2);
     glBegin(GL_POINTS);
-
+    pcl::VoxelGrid<PointT>  voxel;
+    voxel.setLeafSize( 0.03, 0.03, 0.03);
     for(auto pMP : vpMPs){
         map<KeyFrame*, int> observations = pMP->GetObservations();
         float ir = pMP->mRed;
@@ -96,20 +99,22 @@ void MapDrawer::DrawMapPlanes() {
         float ib = pMP->mBlue;
         float norm = sqrt(ir*ir + ig*ig + ib*ib);
         glColor3f(ir/norm, ig/norm, ib/norm);
+        PointCloud::Ptr allCloudPoints(new PointCloud);
         for(auto mit = observations.begin(), mend = observations.end(); mit != mend; mit++){
             KeyFrame* frame = mit->first;
             int id = mit->second;
-            cv::Mat Twc = frame->GetPoseInverse();
-            cv::Mat pos(4,1,CV_32F);
-            for(auto& p : frame->mvPlanePoints[id].points){
-                pos.at<float>(0) = p.x;
-                pos.at<float>(1) = p.y;
-                pos.at<float>(2) = p.z;
-                pos.at<float>(3) = 1;
 
-                pos = Twc*pos;
-                glVertex3f(pos.at<float>(0),pos.at<float>(1),pos.at<float>(2));
-            }
+            Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( frame->GetPose() );
+            PointCloud::Ptr cloud(new PointCloud);
+            pcl::transformPointCloud( frame->mvPlanePoints[id], *cloud, T.inverse().matrix());
+            *allCloudPoints += *cloud;
+        }
+        PointCloud::Ptr tmp(new PointCloud());
+        voxel.setInputCloud( allCloudPoints );
+        voxel.filter( *tmp );
+
+        for(auto& p : tmp->points){
+            glVertex3f(p.x, p.y, p.z);
         }
     }
     glEnd();

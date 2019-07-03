@@ -107,10 +107,10 @@ Plane.VPChi: 50
 Plane.ParallelInfo: 0.1
 Plane.VerticalInfo: 0.1
 
-Line.Ratio: 0.1
+Line.Ratio: 0.2
 
 
 #SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/traj0n_frei_png/planeORB_624.txt"
-SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/living_room_traj3n_frei_png/planeORB_notseen_test.txt"
+SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/living_room_traj1n_frei_png/planeORB_notseen_test.txt"
 SavePath.Keyframe: "KeyFrameTrajectory.txt"
 

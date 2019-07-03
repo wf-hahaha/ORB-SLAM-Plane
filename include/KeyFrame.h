@@ -220,6 +220,7 @@ public:
     void AddNotSeenMapPlane(MapPlane* pMP, const int &idx);
     void EraseMapPlaneMatch(const int &idx);
     void EraseMapPlaneMatch(MapPlane* pMP);
+    void EraseNotSeenMapPlaneMatch(MapPlane* pMP);
     // The following variables need to be accessed trough a mutex to be thread safe.
 protected:
 

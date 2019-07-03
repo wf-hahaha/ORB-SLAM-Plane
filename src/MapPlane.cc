@@ -12,21 +12,22 @@ namespace ORB_SLAM2{
     mutex MapPlane::mGlobalMutex;
 
     MapPlane::MapPlane(const cv::Mat &Pos, ORB_SLAM2::KeyFrame *pRefKF, int idx, bool s):
-    mnBALocalForKF(0), mvBoundaryPoints(new PointCloud()), mbSeen(s)
-    {
+    mnBALocalForKF(0), mvBoundaryPoints(new PointCloud()), mbSeen(s) {
         Pos.copyTo(mWorldPos);
         mnId = nLastId++;
-        AddObservation(pRefKF, idx);
 
-//        srand((int)time(nullptr));
-        mRed = rand() % 256;
-        mBlue = rand() % 256;
-        mGreen = rand() % 256;
-        Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( pRefKF->GetPose() );
-        if(s)
-            pcl::transformPointCloud( pRefKF->mvBoundaryPoints[idx], *mvBoundaryPoints, T.inverse().matrix());
-        else
-            pcl::transformPointCloud( pRefKF->mvNotSeenBoundaryPoints[idx], *mvBoundaryPoints, T.inverse().matrix());
+        mRed = rand() % 255;
+        mBlue = rand() % 255;
+        mGreen = rand() % 255;
+
+        Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat(pRefKF->GetPose());
+        if (s) {
+            pcl::transformPointCloud(pRefKF->mvBoundaryPoints[idx], *mvBoundaryPoints, T.inverse().matrix());
+            AddObservation(pRefKF, idx);
+        } else {
+            pcl::transformPointCloud(pRefKF->mvNotSeenBoundaryPoints[idx], *mvBoundaryPoints, T.inverse().matrix());
+            AddNotSeenObservation(pRefKF, idx);
+        }
     }
 
     void MapPlane::AddObservation(ORB_SLAM2::KeyFrame *pKF, int idx) {
@@ -34,6 +35,13 @@ namespace ORB_SLAM2{
         if(mObservations.count(pKF))
             return;
         mObservations[pKF] = idx;
+    }
+
+    void MapPlane::AddNotSeenObservation(ORB_SLAM2::KeyFrame *pKF, int idx) {
+        unique_lock<mutex> lock(mMutexFeatures);
+        if(mNotSeenObservations.count(pKF))
+            return;
+        mNotSeenObservations[pKF] = idx;
     }
 
     void MapPlane::AddVerObservation(ORB_SLAM2::KeyFrame *pKF, int idx) {
@@ -57,10 +65,23 @@ namespace ORB_SLAM2{
         }
     }
 
+    void MapPlane::EraseNotSeenObservation(ORB_SLAM2::KeyFrame *pKF) {
+        unique_lock<mutex> lock(mMutexFeatures);
+        if(mNotSeenObservations.count(pKF)){
+            mNotSeenObservations.erase(pKF);
+        }
+    }
+
     map<ORB_SLAM2::KeyFrame*, int> MapPlane::GetObservations()
     {
         unique_lock<mutex> lock(mMutexFeatures);
         return mObservations;
+    }
+
+    map<ORB_SLAM2::KeyFrame*, int> MapPlane::GetNotSeenObservations()
+    {
+        unique_lock<mutex> lock(mMutexFeatures);
+        return mNotSeenObservations;
     }
 
     map<ORB_SLAM2::KeyFrame*, int> MapPlane::GetVerObservations()
@@ -79,6 +100,14 @@ namespace ORB_SLAM2{
         unique_lock<mutex> lock(mMutexFeatures);
         if(mObservations.count(pKF))
             return mObservations[pKF];
+        else
+            return -1;
+    }
+
+    int MapPlane::GetNotSeenIndexInKeyFrame(ORB_SLAM2::KeyFrame *pKF) {
+        unique_lock<mutex> lock(mMutexFeatures);
+        if(mNotSeenObservations.count(pKF))
+            return mNotSeenObservations[pKF];
         else
             return -1;
     }
