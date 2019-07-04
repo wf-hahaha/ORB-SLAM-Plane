@@ -61,20 +61,20 @@ void LoopClosing::Run()
     while(1)
     {
         // Check if there are keyframes in the queue
-        if(CheckNewKeyFrames())
-        {
-            // Detect loop candidates and check covisibility consistency
-            if(DetectLoop())
-            {
-               // Compute similarity transformation [sR|t]
-               // In the stereo/RGBD case s=1
-               if(ComputeSim3())
-               {
-                   // Perform loop fusion and pose graph optimization
-                   CorrectLoop();
-               }
-            }
-        }       
+//        if(CheckNewKeyFrames())
+//        {
+//            // Detect loop candidates and check covisibility consistency
+//            if(DetectLoop())
+//            {
+//               // Compute similarity transformation [sR|t]
+//               // In the stereo/RGBD case s=1
+//               if(ComputeSim3())
+//               {
+//                   // Perform loop fusion and pose graph optimization
+//                   CorrectLoop();
+//               }
+//            }
+//        }
 
         ResetIfRequested();
 

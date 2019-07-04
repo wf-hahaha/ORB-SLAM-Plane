@@ -77,14 +77,18 @@ namespace ORB_SLAM2 {
                     Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( frame->GetPose() );
                     PointCloud::Ptr cloud(new PointCloud);
                     pcl::transformPointCloud( frame->mvPlanePoints[id], *cloud, T.inverse().matrix());
-                    *mAllCloudPoints += *cloud;
+                    PointCloud::Ptr tmp(new PointCloud());
+                    voxel.setInputCloud( cloud );
+                    voxel.filter( *tmp );
+                    mAllCloudPoints->swap( *tmp );
+                    *mAllCloudPoints += *tmp;
                 }
             }
 
-            PointCloud::Ptr tmp(new PointCloud());
-            voxel.setInputCloud( mAllCloudPoints );
-            voxel.filter( *tmp );
-            mAllCloudPoints->swap( *tmp );
+//            PointCloud::Ptr tmp(new PointCloud());
+//            voxel.setInputCloud( mAllCloudPoints );
+//            voxel.filter( *tmp );
+//            mAllCloudPoints->swap( *tmp );
             viewer.showCloud( mAllCloudPoints );
         }
     }

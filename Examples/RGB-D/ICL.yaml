@@ -75,8 +75,8 @@ Plane.DistanceThreshold: 0.05
 Plane.LeafSize: 0.01
 Plane.MaxDistance: 10.0
 
-Plane.AssociationDisRef: 0.2
-Plane.AssociationDisMon: 0.2
+Plane.AssociationDisRef: 0.3
+Plane.AssociationDisMon: 0.3
 Plane.AssociationAngRef: 0.8 # 30 degree
 Plane.AssociationAngMon: 0.8 # 30 degree
 #Plane.AssociationAngRef: 0.6428 # 50 degree
@@ -101,16 +101,17 @@ Plane.ParallelThreshold: 0.9962 # 5 degree
 Plane.AngleInfo: 0.5
 Plane.DistanceInfo: 50
 
-Plane.Chi: 100
+Plane.Chi: 200
 Plane.VPChi: 50
 
 Plane.ParallelInfo: 0.1
 Plane.VerticalInfo: 0.1
 
-Line.Ratio: 0.5
+Line.Ratio: 0.2
 
 
 #SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/traj0n_frei_png/planeORB_624.txt"
-SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/living_room_traj3n_frei_png/planeORB_notseen_test.txt"
+#SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/living_room_traj3n_frei_png/planeORB_notseen_test.txt"
+SavePath.Frame: "/home/fishmarch/myData/ICL_NUIM/traj1n_frei_png/planeORB_notseen_test.txt"
 SavePath.Keyframe: "KeyFrameTrajectory.txt"
 
