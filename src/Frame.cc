@@ -829,7 +829,7 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
                 p.y = ( m - cy) * p.z / fy;
                 p.r = 0;
                 p.g = 0;
-                p.b = 255;
+                p.b = 250;
 
                 inputCloud->points.push_back(p);
             }
@@ -1028,6 +1028,9 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
 
     bool Frame::CaculatePlanes(const cv::Mat &inputplane, const cv::Mat &inputline) {
         //(l,m,n) × (o,p,q) = (mq-np,no-lq,lp-mo)
+//        cout << "New Calculate:" << endl;
+//        cout << "line: " << inputline.t() << endl;
+//        cout << "plane: " << inputplane.t() << endl;
         float a,b,c,d;
         a = inputplane.at<float>(1)*inputline.at<float>(5) - inputplane.at<float>(2)*inputline.at<float>(4);
         b = inputplane.at<float>(2)*inputline.at<float>(3) - inputplane.at<float>(0)*inputline.at<float>(5);
@@ -1039,32 +1042,48 @@ void Frame::ComputePlanesFromPointCloud(const cv::Mat &imDepth) {
         if(coef.at<float>(3) < 0)
             coef = -coef;
         if(PlaneNotSeen(coef)){
-            mvPlaneCoefficients.push_back(coef);
-//            mvNotSeenPlaneCoefficients.push_back(coef);
+
             PointCloud cloud;
             PointT p;
-            float dx = inputline.at<float>(3);
-            float dy = inputline.at<float>(4);
-            float d = dx*dx + dy*dy;
-            dx = dx / d;
-            dy = dy / d;
-            for(float i = inputline.at<float>(0)-0.5*dx; i < inputline.at<float>(0)+0.5*dx;){
-                p.x = i;
-                for(float j = inputline.at<float>(1)-0.5*dy; j < inputline.at<float>(1)+0.5*dy;){
-                    p.y = j;
+//            float dx = inputline.at<float>(3);
+//            float dy = inputline.at<float>(4);
+//            float d = sqrt(dx*dx + dy*dy);
+//            dx = abs(dx);
+//            dy = abs(dy);
+            for(float i = -0.25; i< 0.25;){
+                for(float j = -0.25; j < 0.25;){
+                    p.x = inputline.at<float>(0) + i * inputline.at<float>(3) + j * inputplane.at<float>(0);
+                    p.y = inputline.at<float>(1) + i * inputline.at<float>(4) + j * inputplane.at<float>(1);
                     p.z = (coef.at<float>(0)*p.x + coef.at<float>(1)*p.y + coef.at<float>(3)) / (-coef.at<float>(2));
                     p.r = 0;
                     p.g = 255;
                     p.b = 0;
                     cloud.points.push_back(p);
-                    j+=0.02*dy;
+                    j = j + 0.02;
                 }
-                i+=0.02*dx;
+                i = i + 0.02;
             }
+//            for(float i = inputline.at<float>(0)-0.2; i < inputline.at<float>(0)+0.2;){
+//                p.x = i;
+//                for(float j = inputline.at<float>(1)-0.2; j < inputline.at<float>(1)+0.2;){
+//                    p.y = j;
+//                    p.z = (coef.at<float>(0)*p.x + coef.at<float>(1)*p.y + coef.at<float>(3)) / (-coef.at<float>(2));
+//                    p.r = 0;
+//                    p.g = 255;
+//                    p.b = 0;
+//                    cloud.points.push_back(p);
+//                    j = j + 0.02;
+//                }
+//                i = i + 0.02;
+//            }
+            mvPlaneCoefficients.push_back(coef);
+//            mvNotSeenPlaneCoefficients.push_back(coef);
             mvPlanePoints.push_back(cloud);
+//            cout << "yes!" << endl;
 //            mvNotSeenPlanePoints.push_back(cloud);
             return true;
         }
+//        cout << "No!" << endl;
         return false;
 }
 

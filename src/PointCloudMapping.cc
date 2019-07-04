@@ -68,7 +68,7 @@ namespace ORB_SLAM2 {
                     KeyFrame* frame = mit->first;
                     int id = mit->second;
                     for(auto& p : frame->mvPlanePoints[id].points){
-                        if(p.r != 255) {
+                        if(p.r != 255 && p.g != 255 && p.b != 255) {
                             p.r = ir;
                             p.g = ig;
                             p.b = ib;
