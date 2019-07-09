@@ -120,10 +120,10 @@ int main(int argc, char **argv)
             usleep((T-ttrack)*1e6);
     }
 
-    char bStop;
-    while (bStop != 'q'){
-        bStop = getchar();
-    }
+//    char bStop;
+//    while (bStop != 'q'){
+//        bStop = getchar();
+//    }
 
     // Stop all threads
     SLAM.Shutdown();
