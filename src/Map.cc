@@ -240,7 +240,7 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                 float angle = pM.at<float>(0, 0) * pW.at<float>(0, 0) +
                               pM.at<float>(1, 0) * pW.at<float>(1, 0) +
                               pM.at<float>(2, 0) * pW.at<float>(2, 0);
-                float d = pM.at<float>(3, 0) - pW.at<float>(3, 0);
+                float d = abs(pM.at<float>(3, 0)) - abs(pW.at<float>(3, 0));
                 if(out)
                     cout << " angle : " << angle << "  d :" << d << "  ";
                 if (find && (angle > aTh || angle < -aTh) && d < dTh && d > -dTh) // associate plane
@@ -309,7 +309,7 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                 float angle = pM.at<float>(0, 0) * pW.at<float>(0, 0) +
                               pM.at<float>(1, 0) * pW.at<float>(1, 0) +
                               pM.at<float>(2, 0) * pW.at<float>(2, 0);
-                float d = pM.at<float>(3, 0) - pW.at<float>(3, 0);
+                float d = abs(pM.at<float>(3, 0)) - abs(pW.at<float>(3, 0));
                 if(out)
                     cout << " angle : " << angle << "  d :" << d << "  ";
                 if (find && (angle > aTh || angle < -aTh) && d < dTh && d > -dTh) // associate plane
@@ -498,8 +498,14 @@ void Map::AssociatePlanes(ORB_SLAM2::Frame &pF, const float &dTh, const float &a
                 }
             }
         }
-    }
 
+        for(auto p : pF.mvpMapPlanes){
+            if(p== nullptr)
+                pF.mbNewPlane = true;
+        }
+
+
+    }
 
     cv::Mat Map::ComputePlaneInFrame(const ORB_SLAM2::Frame &pF, int i) {
         cv::Mat temp;

@@ -5,7 +5,8 @@
 
 #include "MapPlane.h"
 
-#include<mutex>
+#include <mutex>
+#include <time.h>
 
 namespace ORB_SLAM2{
     long unsigned int MapPlane::nLastId = 0;
@@ -15,6 +16,8 @@ namespace ORB_SLAM2{
     mnBALocalForKF(0), mvBoundaryPoints(new PointCloud()), mbSeen(s) {
         Pos.copyTo(mWorldPos);
         mnId = nLastId++;
+        if(mnId == 1)
+            srand(time(0));
 
         mRed = rand() % 255;
         mBlue = rand() % 255;

@@ -39,7 +39,7 @@ public:
     Map* mpMap;
 
     void DrawMapPoints();
-    void DrawMapPlanes();
+    void DrawMapPlanes(bool bAssumed);
     void DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph);
     void DrawCurrentCamera(pangolin::OpenGlMatrix &Twc);
     void SetCurrentCameraPose(const cv::Mat &Tcw);

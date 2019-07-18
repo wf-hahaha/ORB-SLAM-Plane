@@ -46,7 +46,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mvpMapPlanes(F.mvpMapPlanes), mbNewPlane(F.mbNewPlane), mvBoundaryPoints(F.mvBoundaryPoints),
     mvpParallelPlanes(F.mvpParallelPlanes), mvpVerticalPlanes(F.mvpVerticalPlanes),
     mvNotSeenBoundaryPoints(F.mvNotSeenBoundaryPoints), mvNotSeenPlaneCoefficients(F.mvNotSeenPlaneCoefficients),
-    mnNotSeenPlaneNum(F.mnNotSeenPlaneNum), mvpNotSeenMapPlanes(F.mvpNotSeenMapPlanes)
+    mnNotSeenPlaneNum(F.mnNotSeenPlaneNum), mvpNotSeenMapPlanes(F.mvpNotSeenMapPlanes), mnRealPlaneNum(F.mnRealPlaneNum)
 {
     mnId=nNextId++;
 

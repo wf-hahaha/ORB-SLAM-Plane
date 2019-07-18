@@ -47,7 +47,7 @@ class Map;
         PointCloudMapping(Map* map);
 
         // 插入一个keyframe，会更新一次地图
-        void insertKeyFrame(KeyFrame *kf, cv::Mat &color, cv::Mat &depth);
+        void insertKeyFrame(KeyFrame *kf);
 
         void shutdown();
 

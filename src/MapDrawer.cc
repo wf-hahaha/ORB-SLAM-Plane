@@ -84,14 +84,14 @@ void MapDrawer::DrawMapPoints()
     glEnd();
 }
 
-void MapDrawer::DrawMapPlanes() {
+void MapDrawer::DrawMapPlanes(bool bAssumed) {
     const vector<MapPlane*> &vpMPs = mpMap->GetAllMapPlanes();
     if(vpMPs.empty())
         return;
     glPointSize(mPointSize/2);
     glBegin(GL_POINTS);
     pcl::VoxelGrid<PointT>  voxel;
-    voxel.setLeafSize( 0.03, 0.03, 0.03);
+    voxel.setLeafSize( 0.01, 0.01, 0.01);
     for(auto pMP : vpMPs){
         map<KeyFrame*, int> observations = pMP->GetObservations();
         float ir = pMP->mRed;
@@ -103,7 +103,9 @@ void MapDrawer::DrawMapPlanes() {
         for(auto mit = observations.begin(), mend = observations.end(); mit != mend; mit++){
             KeyFrame* frame = mit->first;
             int id = mit->second;
-
+            if(!bAssumed && id >= frame->mnRealPlaneNum){
+                continue;
+            }
             Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( frame->GetPose() );
             PointCloud::Ptr cloud(new PointCloud);
             pcl::transformPointCloud( frame->mvPlanePoints[id], *cloud, T.inverse().matrix());
@@ -114,6 +116,11 @@ void MapDrawer::DrawMapPlanes() {
         voxel.filter( *tmp );
 
         for(auto& p : tmp->points){
+            if(bAssumed && (p.r ==255 || p.g ==255 || p.b ==255)){
+                glColor3f(1, 0, 0);
+            }else{
+                glColor3f(ir/norm, ig/norm, ib/norm);
+            }
             glVertex3f(p.x, p.y, p.z);
         }
     }
@@ -127,6 +134,7 @@ void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph)
     const float z = w*0.6;
 
     const vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
+
 
     if(bDrawKF)
     {

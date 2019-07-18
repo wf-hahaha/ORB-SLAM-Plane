@@ -38,36 +38,103 @@ namespace ORB_SLAM2 {
         viewerThread->join();
     }
 
-    void PointCloudMapping::insertKeyFrame(KeyFrame *kf, cv::Mat &color, cv::Mat &depth) {
-        cout << "receive a keyframe, id = " << kf->mnId << endl;
+    void PointCloudMapping::insertKeyFrame(KeyFrame *kf) {
+//        cout << "receive a keyframe, id = " << kf->mnId << endl;
         unique_lock<mutex> lck(keyframeMutex);
         mvKeyframes.push_back(kf);
         keyFrameUpdated.notify_one();
     }
 
+//    void PointCloudMapping::viewer() {
+//        pcl::visualization::CloudViewer viewer("viewer");
+//        pcl::VoxelGrid<PointT>  voxel;
+//        voxel.setLeafSize( 0.02, 0.02, 0.02);
+//        while(1)
+//        {
+//            {
+//                unique_lock<mutex> lck_shutdown(shutDownMutex);
+//                if (shutDownFlag) {
+//                    break;
+//                }
+//            }
+//            vector<MapPlane*> PlaneMap = mMap->GetAllMapPlanes();
+//            mAllCloudPoints->points.clear();
+//            for(auto pMP : PlaneMap){
+//                map<KeyFrame*, int> observations = pMP->GetObservations();
+//                int ir = pMP->mRed;
+//                int ig = pMP->mGreen;
+//                int ib = pMP->mBlue;
+//                for(auto mit = observations.begin(), mend = observations.end(); mit != mend; mit++){
+//                    KeyFrame* frame = mit->first;
+//                    int id = mit->second;
+//                    for(auto& p : frame->mvPlanePoints[id].points){
+//                        if(p.r != 255 && p.g != 255 && p.b != 255) {
+//                            p.r = ir;
+//                            p.g = ig;
+//                            p.b = ib;
+//                        }
+//                    }
+//                    Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( frame->GetPose() );
+//                    PointCloud::Ptr cloud(new PointCloud);
+//                    pcl::transformPointCloud( frame->mvPlanePoints[id], *cloud, T.inverse().matrix());
+//                    PointCloud::Ptr tmp(new PointCloud());
+//                    voxel.setInputCloud( cloud );
+//                    voxel.filter( *tmp );
+//                    mAllCloudPoints->swap( *tmp );
+//                    *mAllCloudPoints += *tmp;
+//                }
+//            }
+//
+////            PointCloud::Ptr tmp(new PointCloud());
+////            voxel.setInputCloud( mAllCloudPoints );
+////            voxel.filter( *tmp );
+////            mAllCloudPoints->swap( *tmp );
+//            viewer.showCloud( mAllCloudPoints );
+//        }
+//    }
+
     void PointCloudMapping::viewer() {
-        pcl::visualization::CloudViewer viewer("viewer");
+        boost::shared_ptr< pcl::visualization::PCLVisualizer > viewer(new pcl::visualization::PCLVisualizer("Plane viewer"));
         pcl::VoxelGrid<PointT>  voxel;
         voxel.setLeafSize( 0.02, 0.02, 0.02);
+        viewer->setBackgroundColor(255, 255, 255);
         while(1)
         {
+            viewer->spinOnce();
             {
                 unique_lock<mutex> lck_shutdown(shutDownMutex);
                 if (shutDownFlag) {
                     break;
                 }
             }
-            vector<MapPlane*> PlaneMap = mMap->GetAllMapPlanes();
-            mAllCloudPoints->points.clear();
-            for(auto pMP : PlaneMap){
-                map<KeyFrame*, int> observations = pMP->GetObservations();
-                int ir = pMP->mRed;
-                int ig = pMP->mGreen;
-                int ib = pMP->mBlue;
-                for(auto mit = observations.begin(), mend = observations.end(); mit != mend; mit++){
-                    KeyFrame* frame = mit->first;
-                    int id = mit->second;
-                    for(auto& p : frame->mvPlanePoints[id].points){
+//            {
+//                unique_lock<mutex> lck_keyframeUpdated( keyFrameUpdateMutex );
+//                keyFrameUpdated.wait( lck_keyframeUpdated );
+//            }
+
+            // keyframe is updated
+            size_t N=0;
+            {
+                unique_lock<mutex> lck( keyframeMutex );
+                N = mvKeyframes.size();
+            }
+
+            for ( size_t i=lastKeyframeSize; i<N ; i++ )
+            {
+                KeyFrame* frame = mvKeyframes[i];
+                for(int j = 0; j<frame->mvpMapPlanes.size();++j){
+                    MapPlane* pMP = frame->mvpMapPlanes[j];
+                    if(pMP== nullptr)
+                        continue;
+
+                    int ir = pMP->mRed;
+                    int ig = pMP->mGreen;
+                    int ib = pMP->mBlue;
+
+                    if(j >= frame->mnRealPlaneNum){
+                        break;
+                    }
+                    for(auto& p : frame->mvPlanePoints[j].points){
                         if(p.r != 255 && p.g != 255 && p.b != 255) {
                             p.r = ir;
                             p.g = ig;
@@ -76,20 +143,18 @@ namespace ORB_SLAM2 {
                     }
                     Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( frame->GetPose() );
                     PointCloud::Ptr cloud(new PointCloud);
-                    pcl::transformPointCloud( frame->mvPlanePoints[id], *cloud, T.inverse().matrix());
+                    pcl::transformPointCloud( frame->mvPlanePoints[j], *cloud, T.inverse().matrix());
                     PointCloud::Ptr tmp(new PointCloud());
                     voxel.setInputCloud( cloud );
                     voxel.filter( *tmp );
-                    mAllCloudPoints->swap( *tmp );
-                    *mAllCloudPoints += *tmp;
+                    pcl::visualization::PointCloudColorHandlerRGBField<PointT> rgb(tmp);
+                    std::stringstream cloudname;
+                    cloudname << frame->mnId << "_" << j ;
+                    viewer->addPointCloud(tmp, rgb, cloudname.str());
                 }
             }
-
-//            PointCloud::Ptr tmp(new PointCloud());
-//            voxel.setInputCloud( mAllCloudPoints );
-//            voxel.filter( *tmp );
-//            mAllCloudPoints->swap( *tmp );
-            viewer.showCloud( mAllCloudPoints );
+            lastKeyframeSize = N;
+            viewer->spinOnce();
         }
     }
 

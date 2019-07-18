@@ -209,6 +209,7 @@ public:
     std::vector<cv::Mat> mvNotSeenPlaneCoefficients;
 
     int mnPlaneNum;
+    int mnRealPlaneNum;
     int mnNotSeenPlaneNum;
     std::vector<MapPlane*> mvpMapPlanes;
     std::vector<MapPlane*> mvpNotSeenMapPlanes;

@@ -238,6 +238,7 @@ public:
     std::vector<bool> mvbParPlaneOutlier;
     std::vector<bool> mvbVerPlaneOutlier;
     int mnPlaneNum;
+    int mnRealPlaneNum;
     int mnNotSeenPlaneNum;
     bool mbNewPlane; // used to determine a keyframe
 private:

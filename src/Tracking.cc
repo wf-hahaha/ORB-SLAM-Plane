@@ -451,7 +451,7 @@ void Tracking::Track()
                 if(pMP && pMP->mbSeen){
                     pMP->UpdateBoundary(mCurrentFrame,i);
                 }else{
-                    mCurrentFrame.mbNewPlane = true;
+//                    mCurrentFrame.mbNewPlane = true;
                 }
             }
 
@@ -543,7 +543,7 @@ void Tracking::Track()
 
 void Tracking::StereoInitialization()
 {
-    if(mCurrentFrame.N>500)
+    if(mCurrentFrame.N>50)
     {
         // Set Frame pose to the origin
         mCurrentFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
@@ -824,9 +824,9 @@ bool Tracking::TrackReferenceKeyFrame()
     mCurrentFrame.mvpMapPoints = vpMapPointMatches;
     mCurrentFrame.SetPose(mLastFrame.mTcw);
 
-    mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
+//    mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
 //    mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThRef, mfAThRef, mfVerTh, mfParTh);
-//    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
+    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
     Optimizer::PoseOptimization(&mCurrentFrame);
 
     // Discard outliers
@@ -855,10 +855,10 @@ bool Tracking::TrackReferenceKeyFrame()
     {
         if(mCurrentFrame.mvpMapPlanes[i])
         {
-            if(mCurrentFrame.mvbPlaneOutlier[i])
+            if(mCurrentFrame.mvpMapPlanes[i]!= nullptr && mCurrentFrame.mvbPlaneOutlier[i])
             {
                 mCurrentFrame.mvpMapPlanes[i]=static_cast<MapPlane*>(NULL);
-                mCurrentFrame.mvbPlaneOutlier[i]=false;
+//                mCurrentFrame.mvbPlaneOutlier[i]=false;
                 nmatches--;
                 nDisgardPlane++;
             }
@@ -997,9 +997,9 @@ bool Tracking::TrackWithMotionModel()
     if(nmatches<10) //20
         return false;
 
-    mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
+//    mpMap->AssociatePlanesByBoundary(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
 //    mpMap->AssociatePlanesInFrame(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
-//    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
+    mpMap->AssociatePlanes(mCurrentFrame, mfDThMon, mfAThMon, mfVerTh, mfParTh);
     // Optimize frame pose with all matches
     Optimizer::PoseOptimization(&mCurrentFrame);
 
@@ -1026,9 +1026,9 @@ bool Tracking::TrackWithMotionModel()
     int nDisgardPlane = 0;
     for (int i = 0; i < mCurrentFrame.mnPlaneNum; i++) {
         if (mCurrentFrame.mvpMapPlanes[i]) {
-            if (mCurrentFrame.mvbPlaneOutlier[i]) {
+            if (mCurrentFrame.mvpMapPlanes[i]!= nullptr && mCurrentFrame.mvbPlaneOutlier[i]) {
                 mCurrentFrame.mvpMapPlanes[i] = static_cast<MapPlane *>(NULL);
-                mCurrentFrame.mvbPlaneOutlier[i] = false;
+//                mCurrentFrame.mvbPlaneOutlier[i] = false;
                 nmatches--;
                 nDisgardPlane++;
             } else
@@ -1113,10 +1113,10 @@ bool Tracking::TrackLocalMap()
     {
         if(mCurrentFrame.mvpMapPlanes[i])
         {
-            if(mCurrentFrame.mvbPlaneOutlier[i])
+            if(mCurrentFrame.mvpMapPlanes[i]!= nullptr && mCurrentFrame.mvbPlaneOutlier[i])
             {
                 mCurrentFrame.mvpMapPlanes[i]=static_cast<MapPlane*>(NULL);
-                mCurrentFrame.mvbPlaneOutlier[i]=false;
+//                mCurrentFrame.mvbPlaneOutlier[i]=false;
                 nDisgardPlane++;
             }
             else
@@ -1314,6 +1314,9 @@ void Tracking::CreateNewKeyFrame()
                 continue;
             }
 
+            if(mCurrentFrame.mvbPlaneOutlier[i])
+                continue;
+
             cv::Mat p3D = mCurrentFrame.ComputePlaneWorldCoeff(i);
 //            cout << "create new plane :" << i << "  " << mCurrentFrame.mvPlaneCoefficients[i] << endl;
             MapPlane* pNewMP = new MapPlane(p3D, pKF, i);
@@ -1397,7 +1400,7 @@ void Tracking::CreateNewKeyFrame()
 
     mpLocalMapper->SetNotStop(false);
 
-//    mpPointCloudMapping->insertKeyFrame( pKF, mImGray, mImDepth );
+    mpPointCloudMapping->insertKeyFrame( pKF);
 
     mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKF;

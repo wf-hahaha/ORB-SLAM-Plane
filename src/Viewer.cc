@@ -69,6 +69,7 @@ void Viewer::Run()
     pangolin::Var<bool> menuFollowCamera("menu.Follow Camera",true,true);
     pangolin::Var<bool> menuShowPoints("menu.Show Points",true,true);
     pangolin::Var<bool> menuShowPlanes("menu.Show Planes",false,true);
+    pangolin::Var<bool> menuShowAssumedPlanes("menu.Show Assumed Planes",false,true);
     pangolin::Var<bool> menuShowKeyFrames("menu.Show KeyFrames",true,true);
     pangolin::Var<bool> menuShowGraph("menu.Show Graph",true,true);
     pangolin::Var<bool> menuLocalizationMode("menu.Localization Mode",false,true);
@@ -133,7 +134,7 @@ void Viewer::Run()
         if(menuShowPoints)
             mpMapDrawer->DrawMapPoints();
         if(menuShowPlanes)
-            mpMapDrawer->DrawMapPlanes();
+            mpMapDrawer->DrawMapPlanes(menuShowAssumedPlanes);
 
         pangolin::FinishFrame();
 
